@@ -6,7 +6,7 @@ use std::fmt;
 use List::Nil;
 use List::Cons;
 
-#[deriving(PartialEq, Eq)]
+#[deriving(Clone, PartialEq, Eq)]
 pub enum List<A> {
     Nil,
     Cons(A, Box<List<A>>)
@@ -17,6 +17,36 @@ macro_rules! list[
     ($x:expr)                => (Cons($x, box Nil));
     ($x:expr, $($xs:expr),+) => (Cons($x, box list!($($xs),+)));
 ]
+
+impl<A> List<A> {
+    pub fn length(&self) -> int {
+        self.fold_left(|a, _| a + 1, 0)
+    }
+}
+
+impl<A: Clone> List<A> {
+    pub fn head(&self) -> Option<A> {
+        match *self {
+            Nil            => None,
+            Cons(ref x, _) => Some(x.clone())
+        }
+    }
+
+    pub fn tail(&self) -> Option<List<A>> {
+        match *self {
+            Nil                 => None,
+            Cons(_, box ref xs) => Some(xs.clone())
+        }
+    }
+
+    pub fn nth(&self, i: int) -> Option<A> {
+        panic!("TODO")
+    }
+
+    pub fn rev(&self) -> List<A> {
+        self.fold_left(|a, x| Cons(x.clone(), box a), Nil)
+    }
+}
 
 impl<A> List<A> {
     pub fn map<B>(&self, f: |&A| -> B) -> List<B> {
@@ -34,17 +64,6 @@ impl<A> List<A> {
                 xs.fold_left(f, a)
             }
         }
-    }
-
-    pub fn length(&self) -> int {
-        self.fold_left(|a, _| a + 1, 0)
-    }
-
-}
-
-impl<A: Clone> List<A> {
-    pub fn rev(&self) -> List<A> {
-        self.fold_left(|a, x| Cons(x.clone(), box a), Nil)
     }
 }
 
