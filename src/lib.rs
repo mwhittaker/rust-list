@@ -58,15 +58,12 @@ impl<A: Clone> List<A> {
     }
 
     pub fn rev_append(&self, ys: &List<A>) -> List<A> {
-        fn help<A: Clone>(xs: &List<A>, ys: List<A>) -> List<A> {
-            match *xs {
-                Nil                     => ys,
-                Cons(ref x, box ref xs) => help(xs, Cons(x.clone(), box ys))
-            }
-        }
-
-        help(self, ys.clone())
+        self.fold_left(|ys, x| Cons(x.clone(), box ys), ys.clone())
     }
+}
+
+pub fn concat<A: Clone>(xss: List<&List<A>>) -> List<A> {
+    xss.fold_left(|xs, ys| xs.append(ys.clone()), list![])
 }
 
 impl<A> List<A> {
@@ -219,5 +216,23 @@ mod tests {
         assert_eq!(list![1i, 2]      .rev_append(&list![3]),           list![2i, 1, 3]);
         assert_eq!(list![1i]         .rev_append(&list![2i, 3]),       list![1i, 2, 3]);
         assert_eq!(list![1i, 2, 3, 4].rev_append(&list![5i, 6, 7, 8]), list![4i, 3, 2, 1, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn concat_test() {
+        let nil: List<&List<int>> = list![];
+        let ws:  List<int> = list![];
+        let xs:  List<int> = list![1i];
+        let ys:  List<int> = list![2i, 3];
+        let zs:  List<int> = list![4i, 5, 6];
+
+        assert_eq!(concat(nil),                       list![]);
+        assert_eq!(concat(list![&ws]),                list![]);
+        assert_eq!(concat(list![&xs]),                list![1i]);
+        assert_eq!(concat(list![&ys]),                list![2i, 3]);
+        assert_eq!(concat(list![&zs]),                list![4i, 5, 6]);
+        assert_eq!(concat(list![&ws, &xs]),           list![1i]);
+        assert_eq!(concat(list![&ws, &xs, &ys]),      list![1i, 2, 3]);
+        assert_eq!(concat(list![&ws, &xs, &ys, &zs]), list![1i, 2, 3, 4, 5, 6]);
     }
 }
