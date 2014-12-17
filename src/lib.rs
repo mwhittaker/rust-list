@@ -7,18 +7,18 @@ use std::fmt;
 use List::Nil;
 use List::Cons;
 
-#[macro_export]
-macro_rules! lst[
-    ()                       => (Nil);
-    ($x:expr)                => (Cons($x, box Nil));
-    ($x:expr, $($xs:expr),+) => (Cons($x, box lst!($($xs),+)));
-]
-
 #[deriving(Clone, PartialEq, Eq)]
 pub enum List<A> {
     Nil,
     Cons(A, Box<List<A>>)
 }
+
+#[macro_export]
+macro_rules! list[
+    ()                       => (Nil);
+    ($x:expr)                => (Cons($x, box Nil));
+    ($x:expr, $($xs:expr),+) => (Cons($x, box list!($($xs),+)));
+]
 
 impl<A> List<A> {
     pub fn length(&self) -> int {
@@ -95,56 +95,56 @@ mod tests {
 
     #[test]
     fn macro_test() {
-        let nil: List<int> = lst![];
+        let nil: List<int> = list![];
         assert_eq!(nil,             Nil);
-        assert_eq!(lst![1i],       Cons(1i, box Nil));
-        assert_eq!(lst![1i, 2],    Cons(1i, box Cons(2, box Nil)));
-        assert_eq!(lst![1i, 2, 3], Cons(1i, box Cons(2, box Cons(3, box Nil))));
+        assert_eq!(list![1i],       Cons(1i, box Nil));
+        assert_eq!(list![1i, 2],    Cons(1i, box Cons(2, box Nil)));
+        assert_eq!(list![1i, 2, 3], Cons(1i, box Cons(2, box Cons(3, box Nil))));
 
-        let nil: List<Box<int>> = lst![];
+        let nil: List<Box<int>> = list![];
         assert_eq!(nil,                         Nil);
-        assert_eq!(lst![box 1i],               Cons(box 1i, box Nil));
-        assert_eq!(lst![box 1i, box 2],        Cons(box 1i, box Cons(box 2, box Nil)));
-        assert_eq!(lst![box 1i, box 2, box 3], Cons(box 1i, box Cons(box 2, box Cons(box 3, box Nil))));
+        assert_eq!(list![box 1i],               Cons(box 1i, box Nil));
+        assert_eq!(list![box 1i, box 2],        Cons(box 1i, box Cons(box 2, box Nil)));
+        assert_eq!(list![box 1i, box 2, box 3], Cons(box 1i, box Cons(box 2, box Cons(box 3, box Nil))));
     }
 
     #[test]
     fn lenght_test() {
-        let nil: List<int> = lst![];
+        let nil: List<int> = list![];
         assert_eq!(nil                  .length(), 0);
-        assert_eq!(lst![1i]            .length(), 1);
-        assert_eq!(lst![1i, 2]         .length(), 2);
-        assert_eq!(lst![1i, 2, 3]      .length(), 3);
-        assert_eq!(lst![1i, 2, 3, 4]   .length(), 4);
-        assert_eq!(lst![1i, 2, 3, 4, 5].length(), 5);
+        assert_eq!(list![1i]            .length(), 1);
+        assert_eq!(list![1i, 2]         .length(), 2);
+        assert_eq!(list![1i, 2, 3]      .length(), 3);
+        assert_eq!(list![1i, 2, 3, 4]   .length(), 4);
+        assert_eq!(list![1i, 2, 3, 4, 5].length(), 5);
     }
 
     #[test]
     fn hd_test() {
-        let nil: List<int> = lst![];
+        let nil: List<int> = list![];
         assert_eq!(nil.hd(), None);
-        assert_eq!(lst![1i]      .hd(), Some(1i));
-        assert_eq!(lst![1i, 2]   .hd(), Some(1i));
-        assert_eq!(lst![1i, 2, 3].hd(), Some(1i));
+        assert_eq!(list![1i]      .hd(), Some(1i));
+        assert_eq!(list![1i, 2]   .hd(), Some(1i));
+        assert_eq!(list![1i, 2, 3].hd(), Some(1i));
     }
 
     #[test]
     fn tl_test() {
-        let nil: List<int> = lst![];
+        let nil: List<int> = list![];
         assert_eq!(nil.tl(), None);
-        assert_eq!(lst![1i]      .tl(), Some(lst![]));
-        assert_eq!(lst![1i, 2]   .tl(), Some(lst![2i]));
-        assert_eq!(lst![1i, 2, 3].tl(), Some(lst![2i, 3]));
+        assert_eq!(list![1i]      .tl(), Some(list![]));
+        assert_eq!(list![1i, 2]   .tl(), Some(list![2i]));
+        assert_eq!(list![1i, 2, 3].tl(), Some(list![2i, 3]));
     }
 
     #[test]
     fn rev_test() {
-        let nil: List<int> = lst![];
+        let nil: List<int> = list![];
         assert_eq!(nil                 .rev(), nil);
-        assert_eq!(lst![1i]            .rev(), lst![1i]);
-        assert_eq!(lst![1i, 2]         .rev(), lst![2i, 1]);
-        assert_eq!(lst![1i, 2, 3]      .rev(), lst![3i, 2, 1]);
-        assert_eq!(lst![1i, 2, 3, 4]   .rev(), lst![4i, 3, 2, 1]);
-        assert_eq!(lst![1i, 2, 3, 4, 5].rev(), lst![5i, 4, 3, 2, 1]);
+        assert_eq!(list![1i]            .rev(), list![1i]);
+        assert_eq!(list![1i, 2]         .rev(), list![2i, 1]);
+        assert_eq!(list![1i, 2, 3]      .rev(), list![3i, 2, 1]);
+        assert_eq!(list![1i, 2, 3, 4]   .rev(), list![4i, 3, 2, 1]);
+        assert_eq!(list![1i, 2, 3, 4, 5].rev(), list![5i, 4, 3, 2, 1]);
     }
 }
