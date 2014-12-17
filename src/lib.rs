@@ -12,6 +12,7 @@ pub enum List<A> {
     Cons(A, Box<List<A>>)
 }
 
+#[macro_export]
 macro_rules! list[
     ()                       => (Nil);
     ($x:expr)                => (Cons($x, box Nil));
