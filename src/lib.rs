@@ -66,6 +66,10 @@ pub fn concat<A: Clone>(xss: List<&List<A>>) -> List<A> {
     xss.fold_left(|xs, ys| xs.append(ys.clone()), list![])
 }
 
+pub fn flatten<A: Clone>(xss: List<&List<A>>) -> List<A> {
+    concat(xss)
+}
+
 impl<A> List<A> {
     pub fn map<B>(&self, f: |&A| -> B) -> List<B> {
         match *self {
@@ -234,5 +238,23 @@ mod tests {
         assert_eq!(concat(list![&ws, &xs]),           list![1i]);
         assert_eq!(concat(list![&ws, &xs, &ys]),      list![1i, 2, 3]);
         assert_eq!(concat(list![&ws, &xs, &ys, &zs]), list![1i, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn flatten_test() {
+        let nil: List<&List<int>> = list![];
+        let ws:  List<int> = list![];
+        let xs:  List<int> = list![1i];
+        let ys:  List<int> = list![2i, 3];
+        let zs:  List<int> = list![4i, 5, 6];
+
+        assert_eq!(flatten(nil),                       list![]);
+        assert_eq!(flatten(list![&ws]),                list![]);
+        assert_eq!(flatten(list![&xs]),                list![1i]);
+        assert_eq!(flatten(list![&ys]),                list![2i, 3]);
+        assert_eq!(flatten(list![&zs]),                list![4i, 5, 6]);
+        assert_eq!(flatten(list![&ws, &xs]),           list![1i]);
+        assert_eq!(flatten(list![&ws, &xs, &ys]),      list![1i, 2, 3]);
+        assert_eq!(flatten(list![&ws, &xs, &ys, &zs]), list![1i, 2, 3, 4, 5, 6]);
     }
 }
