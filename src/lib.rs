@@ -52,7 +52,15 @@ impl<A: Clone> List<A> {
     pub fn rev(&self) -> List<A> {
         self.fold_left(|a, x| Cons(x.clone(), box a), Nil)
     }
+}
 
+impl<A> List<A> {
+    fn reved(self) -> List<A> {
+        self.folded_left(|a, x| Cons(x, box a), Nil)
+    }
+}
+
+impl<A: Clone> List<A> {
     pub fn append(&self, ys: &List<A>) -> List<A> {
         self.clone().rev().rev_append(ys)
     }
@@ -71,19 +79,44 @@ pub fn flatten<A: Clone>(xss: List<&List<A>>) -> List<A> {
 }
 
 impl<A> List<A> {
+    pub fn iter(&self, f: |&A| -> ()) {
+        self.map(f);
+    }
+
     pub fn map<B>(&self, f: |&A| -> B) -> List<B> {
-        match *self {
-            Nil                 => Nil,
-            Cons(ref x, ref xs) => Cons (f(x), box xs.map(f))
-        }
+        self.fold_left(|l, x| Cons(f(x), box l), list![]).reved()
+    }
+
+    pub fn rev_map<B>(&self, f: |&A| -> B) -> List<B> {
+        self.map(f).reved()
     }
 
     pub fn fold_left<B>(&self, f: |B, &A| -> B, a: B) -> B {
         match *self {
-            Nil                 => a,
+            Nil => a,
             Cons(ref x, ref xs) => {
                 let a = f(a, x);
                 xs.fold_left(f, a)
+            }
+        }
+    }
+
+    fn folded_left<B>(self, f: |B, A| -> B, a: B) -> B {
+        match self {
+            Nil => a,
+            Cons(x, xs) => {
+                let a = f(a, x);
+                xs.folded_left(f, a)
+            }
+        }
+    }
+
+    pub fn fold_right<B>(&self, a: B, f: |&A, B| -> B) -> B {
+        match *self {
+            Nil => a,
+            Cons(ref x, ref xs) => {
+                let a = xs.fold_right(a, |x, a| f(x, a));
+                f(x, a)
             }
         }
     }
@@ -166,6 +199,18 @@ mod tests {
         assert_eq!(list![1i, 2, 3]      .rev(), list![3i, 2, 1]);
         assert_eq!(list![1i, 2, 3, 4]   .rev(), list![4i, 3, 2, 1]);
         assert_eq!(list![1i, 2, 3, 4, 5].rev(), list![5i, 4, 3, 2, 1]);
+    }
+
+    #[test]
+    fn reved_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1                 .reved(), nil2);
+        assert_eq!(list![1i]            .reved(), list![1i]);
+        assert_eq!(list![1i, 2]         .reved(), list![2i, 1]);
+        assert_eq!(list![1i, 2, 3]      .reved(), list![3i, 2, 1]);
+        assert_eq!(list![1i, 2, 3, 4]   .reved(), list![4i, 3, 2, 1]);
+        assert_eq!(list![1i, 2, 3, 4, 5].reved(), list![5i, 4, 3, 2, 1]);
     }
 
     #[test]
@@ -256,5 +301,71 @@ mod tests {
         assert_eq!(flatten(list![&ws, &xs]),           list![1i]);
         assert_eq!(flatten(list![&ws, &xs, &ys]),      list![1i, 2, 3]);
         assert_eq!(flatten(list![&ws, &xs, &ys, &zs]), list![1i, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn iter_test() {
+        let mut x = 0i;
+        (list![1i, 2, 3, 4]).iter(|y| x += *y);
+        assert_eq!(x, 10);
+
+        let mut s = String::from_str("");
+        (list!["a", "b", "c"]).iter(|y| s = s.clone() + *y);
+        assert_eq!(s, String::from_str("abc"));
+    }
+
+    #[test]
+    fn map_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil            .map(|x| *x),     list![]);
+        assert_eq!(list![1i]      .map(|x| *x),     list![1i]);
+        assert_eq!(list![1i, 2]   .map(|x| *x),     list![1i, 2]);
+        assert_eq!(list![1i, 2, 3].map(|x| *x),     list![1i, 2, 3]);
+        assert_eq!(list![1i]      .map(|x| *x + 1), list![2i]);
+        assert_eq!(list![1i, 2]   .map(|x| *x + 1), list![2i, 3]);
+        assert_eq!(list![1i, 2, 3].map(|x| *x + 1), list![2i, 3, 4]);
+    }
+
+    #[test]
+    fn rev_map_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil            .rev_map(|x| *x),     list![]);
+        assert_eq!(list![1i]      .rev_map(|x| *x),     list![1i]);
+        assert_eq!(list![1i, 2]   .rev_map(|x| *x),     list![2i, 1]);
+        assert_eq!(list![1i, 2, 3].rev_map(|x| *x),     list![3i, 2, 1]);
+        assert_eq!(list![1i]      .rev_map(|x| *x + 1), list![2i]);
+        assert_eq!(list![1i, 2]   .rev_map(|x| *x + 1), list![3i, 2]);
+        assert_eq!(list![1i, 2, 3].rev_map(|x| *x + 1), list![4i, 3, 2]);
+    }
+
+    #[test]
+    fn fold_left_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.fold_left(|a, x| a + *x, 0),  0);
+        assert_eq!(nil.fold_left(|a, x| a + *x, 42), 42);
+        assert_eq!(list![1i, 2, 3, 4].fold_left(|a, x| a + *x, 0), 10);
+        assert_eq!(list![1i, 2, 3, 4].fold_left(|a, x| a * *x, 1), 24);
+        assert_eq!(list!["a", "b", "c"].fold_left(|a, x| a + *x, String::from_str("")), String::from_str("abc"));
+    }
+
+    #[test]
+    fn folded_left_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.folded_left(|a, x| a + x, 0),  0);
+        let nil: List<int> = list![];
+        assert_eq!(nil.folded_left(|a, x| a + x, 42), 42);
+        assert_eq!(list![1i, 2, 3, 4].folded_left(|a, x| a + x, 0), 10);
+        assert_eq!(list![1i, 2, 3, 4].folded_left(|a, x| a * x, 1), 24);
+        assert_eq!(list!["a", "b", "c"].folded_left(|a, x| a + x, String::from_str("")), String::from_str("abc"));
+    }
+
+    #[test]
+    fn fold_right_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.fold_right(0,  |x, a| a + *x),  0);
+        assert_eq!(nil.fold_right(42, |x, a| a + *x),  42);
+        assert_eq!(list![1i, 2, 3, 4].fold_right(0, |x, a| a + *x), 10);
+        assert_eq!(list![1i, 2, 3, 4].fold_right(1, |x, a| a * *x), 24);
+        assert_eq!(list!["a", "b", "c"].fold_right(String::from_str(""), |x, a| a + *x), String::from_str("cba"));
     }
 }
