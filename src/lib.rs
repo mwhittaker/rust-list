@@ -52,6 +52,21 @@ impl<A: Clone> List<A> {
     pub fn rev(&self) -> List<A> {
         self.fold_left(|a, x| Cons(x.clone(), box a), Nil)
     }
+
+    pub fn append(&self, ys: &List<A>) -> List<A> {
+        self.clone().rev().rev_append(ys)
+    }
+
+    pub fn rev_append(&self, ys: &List<A>) -> List<A> {
+        fn help<A: Clone>(xs: &List<A>, ys: List<A>) -> List<A> {
+            match *xs {
+                Nil                     => ys,
+                Cons(ref x, box ref xs) => help(xs, Cons(x.clone(), box ys))
+            }
+        }
+
+        help(self, ys.clone())
+    }
 }
 
 impl<A> List<A> {
@@ -180,5 +195,29 @@ mod tests {
         assert_eq!(list![1i, 2, 3, 4, 5].nth(4),   Some(5i));
         assert_eq!(list![1i, 2, 3, 4, 5].nth(10),  None);
         assert_eq!(list![1i, 2, 3, 4, 5].nth(100), None);
+    }
+
+    #[test]
+    fn append_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil               .append(&nil),                nil);
+        assert_eq!(nil               .append(&list![1i]),          list![1i]);
+        assert_eq!(list![1i]         .append(&nil),                list![1i]);
+        assert_eq!(list![1i]         .append(&list![2i]),          list![1i, 2]);
+        assert_eq!(list![1i, 2]      .append(&list![3]),           list![1i, 2, 3]);
+        assert_eq!(list![1i]         .append(&list![2i, 3]),       list![1i, 2, 3]);
+        assert_eq!(list![1i, 2, 3, 4].append(&list![5i, 6, 7, 8]), list![1i, 2, 3, 4, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn rev_append_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil               .rev_append(&nil),                nil);
+        assert_eq!(nil               .rev_append(&list![1i]),          list![1i]);
+        assert_eq!(list![1i]         .rev_append(&nil),                list![1i]);
+        assert_eq!(list![1i]         .rev_append(&list![2i]),          list![1i, 2]);
+        assert_eq!(list![1i, 2]      .rev_append(&list![3]),           list![2i, 1, 3]);
+        assert_eq!(list![1i]         .rev_append(&list![2i, 3]),       list![1i, 2, 3]);
+        assert_eq!(list![1i, 2, 3, 4].rev_append(&list![5i, 6, 7, 8]), list![4i, 3, 2, 1, 5, 6, 7, 8]);
     }
 }
