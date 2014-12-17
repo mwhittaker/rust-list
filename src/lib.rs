@@ -41,9 +41,13 @@ impl<A: Clone> List<A> {
         }
     }
 
-    //pub fn nth(&self, i: int) -> Option<A> {
-    //    panic!("TODO")
-    //}
+    pub fn nth(&self, i: uint) -> Option<A> {
+        match (i, self) {
+            (_, &Nil)             => None,
+            (0, &Cons(ref x, _))  => Some(x.clone()),
+            (i, &Cons(_, ref xs)) => xs.nth(i - 1)
+        }
+    }
 
     pub fn rev(&self) -> List<A> {
         self.fold_left(|a, x| Cons(x.clone(), box a), Nil)
@@ -140,11 +144,41 @@ mod tests {
     #[test]
     fn rev_test() {
         let nil: List<int> = list![];
-        assert_eq!(nil                 .rev(), nil);
+        assert_eq!(nil                  .rev(), nil);
         assert_eq!(list![1i]            .rev(), list![1i]);
         assert_eq!(list![1i, 2]         .rev(), list![2i, 1]);
         assert_eq!(list![1i, 2, 3]      .rev(), list![3i, 2, 1]);
         assert_eq!(list![1i, 2, 3, 4]   .rev(), list![4i, 3, 2, 1]);
         assert_eq!(list![1i, 2, 3, 4, 5].rev(), list![5i, 4, 3, 2, 1]);
+    }
+
+    #[test]
+    fn nth_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.nth(0),   None);
+        assert_eq!(nil.nth(1),   None);
+        assert_eq!(nil.nth(2),   None);
+        assert_eq!(nil.nth(10),  None);
+        assert_eq!(nil.nth(100), None);
+
+        assert_eq!(list![1i].nth(0),   Some(1i));
+        assert_eq!(list![1i].nth(1),   None);
+        assert_eq!(list![1i].nth(2),   None);
+        assert_eq!(list![1i].nth(10),  None);
+        assert_eq!(list![1i].nth(100), None);
+
+        assert_eq!(list![1i, 2].nth(0),   Some(1i));
+        assert_eq!(list![1i, 2].nth(1),   Some(2i));
+        assert_eq!(list![1i, 2].nth(2),   None);
+        assert_eq!(list![1i, 2].nth(10),  None);
+        assert_eq!(list![1i, 2].nth(100), None);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].nth(0),   Some(1i));
+        assert_eq!(list![1i, 2, 3, 4, 5].nth(1),   Some(2i));
+        assert_eq!(list![1i, 2, 3, 4, 5].nth(2),   Some(3i));
+        assert_eq!(list![1i, 2, 3, 4, 5].nth(3),   Some(4i));
+        assert_eq!(list![1i, 2, 3, 4, 5].nth(4),   Some(5i));
+        assert_eq!(list![1i, 2, 3, 4, 5].nth(10),  None);
+        assert_eq!(list![1i, 2, 3, 4, 5].nth(100), None);
     }
 }
