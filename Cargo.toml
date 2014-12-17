@@ -1,5 +1,5 @@
 [package]
 
-name = "rust-list"
+name = "list"
 version = "0.0.1"
 authors = ["Michael Whittaker <mjw297@cornell.edu>"]
