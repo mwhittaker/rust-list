@@ -1,6 +1,7 @@
 #![feature(macro_rules)]
 #![feature(globs)]
 #![feature(default_type_params)]
+#![macro_escape]
 
 use std::fmt;
 use List::Nil;
