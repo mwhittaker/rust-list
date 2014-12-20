@@ -84,11 +84,26 @@ impl<A> List<A> {
         self.map(f);
     }
 
+    /// Same as `iter`, but the function is applied to the index of the elements
+    /// as first argument (counting from 0), and the element itself as second
+    /// argument.
+    pub fn iteri(&self, f: |int, &A| -> ()) {
+        self.mapi(f);
+    }
+
     /// `list![a1, ..., an].map(f)` applies function `f` to `a1, ..., an`, and
     /// builds the list `list![f(a1), ..., f(an)]` with the results returned by
     /// `f`.
     pub fn map<B>(&self, f: |&A| -> B) -> List<B> {
         self.fold_left(|l, x| Cons(f(x), box l), list![]).reved()
+    }
+
+    /// Same as `map`, but the function is applied to the index of the elements
+    /// as first argument (counting from 0), and the element itself as second
+    /// argument.
+    pub fn mapi<B>(&self, f: |int, &A| -> B) -> List<B> {
+        let mut i = 0i;
+        self.map(|x| {i += 1; f(i - 1, x)})
     }
 
     /// `l.rev_map(f)` gives the same results as `l.rev().map(f)`.
@@ -193,9 +208,20 @@ impl<A> List<A> {
         self.mapped(f);
     }
 
+    /// Non-borrowing implementation of `iteri`.
+    pub fn iteried(self, f: |int, A| -> ()) {
+        self.mapied(f);
+    }
+
     /// Non-borrowing implementation of `map`.
     pub fn mapped<B>(self, f: |A| -> B) -> List<B> {
         self.folded_left(|l, x| Cons(f(x), box l), list![]).reved()
+    }
+
+    /// Non-borrowing implementation of `mapi`.
+    pub fn mapied<B>(self, f: |int, A| -> B) -> List<B> {
+        let mut i = 0i;
+        self.mapped(|x| {i += 1; f(i - 1, x)})
     }
 
     /// Non-borrowing implementation of `rev_map`.
@@ -597,6 +623,20 @@ mod tests {
     }
 
     #[test]
+    fn iteri_test() {
+        let mut x = 0i;
+        (list![1i, 2, 3, 4]).iteri(|i, y| x += *y * (i + 1));
+        assert_eq!(x, 30);
+    }
+
+    #[test]
+    fn iteried_test() {
+        let mut x = 0i;
+        (list![1i, 2, 3, 4]).iteried(|i, y| x += y * (i + 1));
+        assert_eq!(x, 30);
+    }
+
+    #[test]
     fn map_test() {
         let nil: List<int> = list![];
         assert_eq!(nil            .map(|x| *x),     list![]);
@@ -618,6 +658,30 @@ mod tests {
         assert_eq!(list![1i]      .mapped(|x| x + 1), list![2i]);
         assert_eq!(list![1i, 2]   .mapped(|x| x + 1), list![2i, 3]);
         assert_eq!(list![1i, 2, 3].mapped(|x| x + 1), list![2i, 3, 4]);
+    }
+
+    #[test]
+    fn mapi_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil            .mapi(|i, x| *x * (i + 1)), list![]);
+        assert_eq!(list![1i]      .mapi(|i, x| *x * (i + 1)), list![1i]);
+        assert_eq!(list![1i, 2]   .mapi(|i, x| *x * (i + 1)), list![1i, 4]);
+        assert_eq!(list![1i, 2, 3].mapi(|i, x| *x * (i + 1)), list![1i, 4, 9]);
+        assert_eq!(list![1i]      .mapi(|i, x| *x + i),       list![1i]);
+        assert_eq!(list![1i, 2]   .mapi(|i, x| *x + i),       list![1i, 3]);
+        assert_eq!(list![1i, 2, 3].mapi(|i, x| *x + i),       list![1i, 3, 5]);
+    }
+
+    #[test]
+    fn mapied_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil            .mapied(|i, x| x * (i + 1)), list![]);
+        assert_eq!(list![1i]      .mapied(|i, x| x * (i + 1)), list![1i]);
+        assert_eq!(list![1i, 2]   .mapied(|i, x| x * (i + 1)), list![1i, 4]);
+        assert_eq!(list![1i, 2, 3].mapied(|i, x| x * (i + 1)), list![1i, 4, 9]);
+        assert_eq!(list![1i]      .mapied(|i, x| x + i),       list![1i]);
+        assert_eq!(list![1i, 2]   .mapied(|i, x| x + i),       list![1i, 3]);
+        assert_eq!(list![1i, 2, 3].mapied(|i, x| x + i),       list![1i, 3, 5]);
     }
 
     #[test]
