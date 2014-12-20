@@ -23,58 +23,80 @@ macro_rules! list[
 ]
 
 impl<A> List<A> {
+    /// Return the length (number of elements) of the given list.
     pub fn length(&self) -> int {
         self.fold_left(|a, _| a + 1, 0)
     }
 }
 
 impl<A: Clone> List<A> {
+    /// Return the first element of the given list. Return `None` if the list is
+    /// empty.
     pub fn hd(&self) -> Option<A> {
         self.clone().into_hd()
     }
 
+    /// Return the given list without its first element. Return `None` if the
+    /// list is empty.
     pub fn tl(&self) -> Option<List<A>> {
         self.clone().into_tl()
     }
 
+    /// Return the `n`-th element of the given list. The first element (head of
+    /// the list) is at position 0. Return `None` if the list is too short.
     pub fn nth(&self, i: uint) -> Option<A> {
         self.clone().into_nth(i)
     }
 
+    /// List reversal.
     pub fn rev(&self) -> List<A> {
         self.clone().reved()
     }
 
+    /// Catenate two lists.
     pub fn append(&self, ys: &List<A>) -> List<A> {
         self.clone().appended(ys.clone())
     }
 
+    /// `l1.rev_append(l2)` reverses `l1` and concatenates it to `l2`. This is
+    /// equivalent to `l1.rev().append(l2)`.
     pub fn rev_append(&self, ys: &List<A>) -> List<A> {
         self.clone().rev_appended(ys.clone())
     }
 
+    /// Concatenate a list of lists. The elements of the argument are all
+    /// concatenated together (in the same order) to give the result.
     pub fn concat<A: Clone>(xss: List<&List<A>>) -> List<A> {
         List::<A>::concated(xss.mapped(|l| l.clone()))
     }
 
+    /// Same as `concat`.
     pub fn flatten<A: Clone>(xss: List<&List<A>>) -> List<A> {
         List::<A>::concat(xss)
     }
 }
 
 impl<A> List<A> {
+    /// `list![a1, ..., an].iter(f)` applies `f` in turn to `a1, ..., an`. It is
+    /// equivalent to `{f(a1); f(a2); ...; f(an);}`.
     pub fn iter(&self, f: |&A| -> ()) {
         self.map(f);
     }
 
+    /// `list![a1, ..., an].map(f)` applies function `f` to `a1, ..., an`, and
+    /// builds the list `list![f(a1), ..., f(an)]` with the results returned by
+    /// `f`.
     pub fn map<B>(&self, f: |&A| -> B) -> List<B> {
         self.fold_left(|l, x| Cons(f(x), box l), list![]).reved()
     }
 
+    /// `l.rev_map(f)` gives the same results as `l.rev().map(f)`.
     pub fn rev_map<B>(&self, f: |&A| -> B) -> List<B> {
         self.map(f).reved()
     }
 
+    /// `list![b1, ..., bn].fold_left(f, a)` is `f (... (f ( f a b1) b2) ... )
+    /// bn`.
     pub fn fold_left<B>(&self, f: |B, &A| -> B, a: B) -> B {
         match *self {
             Nil => a,
@@ -85,11 +107,12 @@ impl<A> List<A> {
         }
     }
 
-    pub fn fold_right<B>(&self, a: B, f: |&A, B| -> B) -> B {
+    /// `list![a1, ..., an].fold_right(f, b)` is `f a1 (f a2 (... (f an b) ...))`.
+    pub fn fold_right<B>(&self, f: |&A, B| -> B, a: B) -> B {
         match *self {
             Nil => a,
             Cons(ref x, ref xs) => {
-                let a = xs.fold_right(a, |x, a| f(x, a));
+                let a = xs.fold_right(|x, a| f(x, a), a);
                 f(x, a)
             }
         }
@@ -98,6 +121,7 @@ impl<A> List<A> {
 
 // Non-borrowing Implementation
 impl<A> List<A> {
+    /// Non-borrowing implementation of `hd`.
     pub fn into_hd(self) -> Option<A> {
         match self {
             Nil        => None,
@@ -105,6 +129,7 @@ impl<A> List<A> {
         }
     }
 
+    /// Non-borrowing implementation of `tl`.
     pub fn into_tl(self) -> Option<List<A>> {
         match self {
             Nil             => None,
@@ -112,6 +137,7 @@ impl<A> List<A> {
         }
     }
 
+    /// Non-borrowing implementation of `nth`.
     pub fn into_nth(self, i: uint) -> Option<A> {
         match (i, self) {
             (_, Nil)             => None,
@@ -120,38 +146,47 @@ impl<A> List<A> {
         }
     }
 
+    /// Non-borrowing implementation of `rev`.
     fn reved(self) -> List<A> {
         self.folded_left(|a, x| Cons(x, box a), Nil)
     }
 
+    /// Non-borrowing implementation of `append`.
     pub fn appended(self, ys: List<A>) -> List<A> {
         self.reved().rev_appended(ys)
     }
 
+    /// Non-borrowing implementation of `rev_append`.
     pub fn rev_appended(self, ys: List<A>) -> List<A> {
         self.folded_left(|ys, x| Cons(x, box ys), ys)
     }
 
+    /// Non-borrowing implementation of `concat`.
     pub fn concated<A>(xss: List<List<A>>) -> List<A> {
         xss.folded_left(|xs, ys| xs.appended(ys), list![])
     }
 
+    /// Non-borrowing implementation of `flatten`.
     pub fn flattened<A>(xss: List<List<A>>) -> List<A> {
         List::<A>::concated(xss)
     }
 
+    /// Non-borrowing implementation of `iter`.
     pub fn itered(self, f: |A| -> ()) {
         self.mapped(f);
     }
 
+    /// Non-borrowing implementation of `map`.
     pub fn mapped<B>(self, f: |A| -> B) -> List<B> {
         self.folded_left(|l, x| Cons(f(x), box l), list![]).reved()
     }
 
+    /// Non-borrowing implementation of `rev_map`.
     pub fn rev_mapped<B>(self, f: |A| -> B) -> List<B> {
         self.mapped(f).reved()
     }
 
+    /// Non-borrowing implementation of `fold_left`.
     pub fn folded_left<B>(self, f: |B, A| -> B, a: B) -> B {
         match self {
             Nil => a,
@@ -162,11 +197,12 @@ impl<A> List<A> {
         }
     }
 
-    pub fn folded_right<B>(self, a: B, f: |A, B| -> B) -> B {
+    /// Non-borrowing implementation of `fold_right`.
+    pub fn folded_right<B>(self, f: |A, B| -> B, a: B) -> B {
         match self {
             Nil => a,
             Cons(x, xs) => {
-                let a = xs.folded_right(a, |x, a| f(x, a));
+                let a = xs.folded_right(|x, a| f(x, a), a);
                 f(x, a)
             }
         }
@@ -574,21 +610,21 @@ mod tests {
     #[test]
     fn fold_right_test() {
         let nil: List<int> = list![];
-        assert_eq!(nil.fold_right(0,  |x, a| a + *x),  0);
-        assert_eq!(nil.fold_right(42, |x, a| a + *x),  42);
-        assert_eq!(list![1i, 2, 3, 4].fold_right(0, |x, a| a + *x), 10);
-        assert_eq!(list![1i, 2, 3, 4].fold_right(1, |x, a| a * *x), 24);
-        assert_eq!(list!["a", "b", "c"].fold_right(String::from_str(""), |x, a| a + *x), String::from_str("cba"));
+        assert_eq!(nil.fold_right(|x, a| a + *x, 0),  0);
+        assert_eq!(nil.fold_right(|x, a| a + *x, 42),  42);
+        assert_eq!(list![1i, 2, 3, 4]  .fold_right(|x, a| a + *x, 0), 10);
+        assert_eq!(list![1i, 2, 3, 4]  .fold_right(|x, a| a * *x, 1), 24);
+        assert_eq!(list!["a", "b", "c"].fold_right(|x, a| a + *x, String::from_str("")), String::from_str("cba"));
     }
 
     #[test]
     fn folded_right_test() {
         let nil: List<int> = list![];
-        assert_eq!(nil.folded_right(0,  |x, a| a + x),  0);
+        assert_eq!(nil.folded_right(|x, a| a + x, 0),  0);
         let nil: List<int> = list![];
-        assert_eq!(nil.folded_right(42, |x, a| a + x),  42);
-        assert_eq!(list![1i, 2, 3, 4].folded_right(0, |x, a| a + x), 10);
-        assert_eq!(list![1i, 2, 3, 4].folded_right(1, |x, a| a * x), 24);
-        assert_eq!(list!["a", "b", "c"].folded_right(String::from_str(""), |x, a| a + x), String::from_str("cba"));
+        assert_eq!(nil.folded_right(|x, a| a + x, 42),  42);
+        assert_eq!(list![1i, 2, 3, 4].folded_right(|x, a| a + x, 0), 10);
+        assert_eq!(list![1i, 2, 3, 4].folded_right(|x, a| a * x, 1), 24);
+        assert_eq!(list!["a", "b", "c"].folded_right(|x, a| a + x, String::from_str("")), String::from_str("cba"));
     }
 }
