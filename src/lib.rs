@@ -20,7 +20,7 @@ macro_rules! list[
     ()                       => (Nil);
     ($x:expr)                => (Cons($x, box Nil));
     ($x:expr, $($xs:expr),+) => (Cons($x, box list!($($xs),+)));
-]
+];
 
 impl<A> List<A> {
     /// Return the length (number of elements) of the given list.
