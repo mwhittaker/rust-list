@@ -252,6 +252,12 @@ mod tests {
         assert_eq!(list![1i, 2],    Cons(1i, box Cons(2, box Nil)));
         assert_eq!(list![1i, 2, 3], Cons(1i, box Cons(2, box Cons(3, box Nil))));
 
+        let nil: List<int> = list![];
+        assert_eq!(nil,                 Nil);
+        assert_eq!(list![1i],           Cons(1i, box Nil));
+        assert_eq!(list![1i,  2],       Cons(1i, box Cons(2, box Nil)));
+        assert_eq!(list![1i,  2   , 3], Cons(1i, box Cons(2, box Cons(3, box Nil))));
+
         let nil: List<Box<int>> = list![];
         assert_eq!(nil,                         Nil);
         assert_eq!(list![box 1i],               Cons(box 1i, box Nil));
