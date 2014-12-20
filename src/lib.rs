@@ -668,4 +668,13 @@ mod tests {
         assert_eq!(range(0, 4).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4]);
         assert_eq!(range(0, 5).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4, 16]);
     }
+
+    #[test]
+    fn to_string_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil            .to_string(), "[]");
+        assert_eq!(list![1i]      .to_string(), "[1]");
+        assert_eq!(list![1i, 2]   .to_string(), "[1, 2]");
+        assert_eq!(list![1i, 2, 3].to_string(), "[1, 2, 3]");
+    }
 }
