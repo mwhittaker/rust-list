@@ -120,7 +120,23 @@ impl<A> List<A> {
     }
 }
 
-// Non-borrowing Implementation
+impl<A: Clone, B: Clone> List<(A, B)> {
+    /// Transform a list of pairs into a pair of lists: `list![(a1, b1), ...,
+    /// (an, bn)].split()` is `(list![a1, ..., an], list![b1, ..., bn])`.
+    pub fn split(&self) -> (List<A>, List<B>) {
+        self.clone().splitted()
+    }
+}
+
+impl<A: Clone> List<A> {
+    /// Transform a pair of lists into a list of pairs:
+    /// `list![a1, ..., an].combine(list![b1, ..., bn])` is `list![(a1,b2), ...,
+    /// (an,bn)]`. Return `None` if the two lists have different lengths.
+    pub fn combine<B: Clone>(&self, ys: &List<B>) -> Option<List<(A, B)>> {
+        self.clone().combined(ys.clone())
+    }
+}
+
 impl<A> List<A> {
     /// Non-borrowing implementation of `hd`.
     pub fn into_hd(self) -> Option<A> {
@@ -207,6 +223,31 @@ impl<A> List<A> {
                 f(x, a)
             }
         }
+    }
+}
+
+impl<A, B> List<(A, B)> {
+    /// Non-borrowing implementation of `split`.
+    pub fn splitted(self) -> (List<A>, List<B>) {
+        let xsys = self.folded_left(|(xs, ys), (x, y)| (Cons(x, box xs), Cons(y, box ys)), (list![], list![]));
+        (xsys.0.reved(), xsys.1.reved())
+    }
+}
+
+impl<A> List<A> {
+    /// Non-borrowing implementation of `combine`.
+    pub fn combined<B>(self, ys: List<B>) -> Option<List<(A, B)>> {
+        if self.length() != ys.length() {
+            return None
+        }
+
+        let f = |(ys, l), x| {
+            match ys {
+                Nil             => unreachable!(),
+                Cons(y, box ys) => (ys, Cons((x, y), box l))
+            }
+        };
+        Some(self.folded_left(f, (ys, list![])).1.reved())
     }
 }
 
@@ -643,6 +684,51 @@ mod tests {
         assert_eq!(list![1i, 2, 3, 4].folded_right(|x, a| a + x, 0), 10);
         assert_eq!(list![1i, 2, 3, 4].folded_right(|x, a| a * x, 1), 24);
         assert_eq!(list!["a", "b", "c"].folded_right(|x, a| a + x, String::from_str("")), String::from_str("cba"));
+    }
+
+    #[test]
+    fn split_test() {
+        let nil: List<(int, f32)> = list![];
+        assert_eq!(nil                            .split(), (list![],       list![]));
+        assert_eq!(list![(0i, 0.0f32)]            .split(), (list![0i],     list![0.0f32]));
+        assert_eq!(list![(0i, 0.0f32), (42, 43.0)].split(), (list![0i, 42], list![0.0f32, 43.0]));
+    }
+
+    #[test]
+    fn splitted_test() {
+        let nil: List<(int, f32)> = list![];
+        assert_eq!(nil                            .splitted(), (list![],       list![]));
+        assert_eq!(list![(0i, 0.0f32)]            .splitted(), (list![0i],     list![0.0f32]));
+        assert_eq!(list![(0i, 0.0f32), (42, 43.0)].splitted(), (list![0i, 42], list![0.0f32, 43.0]));
+    }
+
+    #[test]
+    fn combine_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<f32> = list![];
+        assert_eq!(nil1           .combine(&nil2),                    Some(list![]));
+        assert_eq!(list![1i]      .combine(&nil2),                    None);
+        assert_eq!(nil1           .combine(&list![1.0f32]),           None);
+        assert_eq!(list![1i]      .combine(&list![1.0f32]),           Some(list![(1, 1.0)]));
+        assert_eq!(list![1i, 2]   .combine(&list![1.0f32, 2.0]),      Some(list![(1, 1.0), (2, 2.0)]));
+        assert_eq!(list![1i, 2, 3].combine(&list![1.0f32, 2.0, 3.0]), Some(list![(1, 1.0), (2, 2.0), (3, 3.0)]));
+    }
+
+    #[test]
+    fn combined_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<f32> = list![];
+        assert_eq!(nil1.combined(nil2), Some(list![]));
+
+        let nil2: List<f32> = list![];
+        assert_eq!(list![1i].combined(nil2), None);
+
+        let nil1: List<int> = list![];
+        assert_eq!(nil1.combined(list![1.0f32]), None);
+
+        assert_eq!(list![1i]      .combined(list![1.0f32]),           Some(list![(1, 1.0)]));
+        assert_eq!(list![1i, 2]   .combined(list![1.0f32, 2.0]),      Some(list![(1, 1.0), (2, 2.0)]));
+        assert_eq!(list![1i, 2, 3].combined(list![1.0f32, 2.0, 3.0]), Some(list![(1, 1.0), (2, 2.0), (3, 3.0)]));
     }
 
     #[test]
