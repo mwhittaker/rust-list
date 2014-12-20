@@ -96,6 +96,7 @@ impl<A> List<A> {
     }
 }
 
+// Non-borrowing Implementation
 impl<A> List<A> {
     pub fn into_hd(self) -> Option<A> {
         match self {
@@ -491,6 +492,17 @@ mod tests {
     }
 
     #[test]
+    fn itered_test() {
+        let mut x = 0i;
+        (list![1i, 2, 3, 4]).itered(|y| x += y);
+        assert_eq!(x, 10);
+
+        let mut s = String::from_str("");
+        (list!["a", "b", "c"]).itered(|y| s = s.clone() + y);
+        assert_eq!(s, String::from_str("abc"));
+    }
+
+    #[test]
     fn map_test() {
         let nil: List<int> = list![];
         assert_eq!(nil            .map(|x| *x),     list![]);
@@ -503,6 +515,18 @@ mod tests {
     }
 
     #[test]
+    fn mapped_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil            .mapped(|x| x),     list![]);
+        assert_eq!(list![1i]      .mapped(|x| x),     list![1i]);
+        assert_eq!(list![1i, 2]   .mapped(|x| x),     list![1i, 2]);
+        assert_eq!(list![1i, 2, 3].mapped(|x| x),     list![1i, 2, 3]);
+        assert_eq!(list![1i]      .mapped(|x| x + 1), list![2i]);
+        assert_eq!(list![1i, 2]   .mapped(|x| x + 1), list![2i, 3]);
+        assert_eq!(list![1i, 2, 3].mapped(|x| x + 1), list![2i, 3, 4]);
+    }
+
+    #[test]
     fn rev_map_test() {
         let nil: List<int> = list![];
         assert_eq!(nil            .rev_map(|x| *x),     list![]);
@@ -512,6 +536,18 @@ mod tests {
         assert_eq!(list![1i]      .rev_map(|x| *x + 1), list![2i]);
         assert_eq!(list![1i, 2]   .rev_map(|x| *x + 1), list![3i, 2]);
         assert_eq!(list![1i, 2, 3].rev_map(|x| *x + 1), list![4i, 3, 2]);
+    }
+
+    #[test]
+    fn rev_mapped_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil            .rev_mapped(|x| x),     list![]);
+        assert_eq!(list![1i]      .rev_mapped(|x| x),     list![1i]);
+        assert_eq!(list![1i, 2]   .rev_mapped(|x| x),     list![2i, 1]);
+        assert_eq!(list![1i, 2, 3].rev_mapped(|x| x),     list![3i, 2, 1]);
+        assert_eq!(list![1i]      .rev_mapped(|x| x + 1), list![2i]);
+        assert_eq!(list![1i, 2]   .rev_mapped(|x| x + 1), list![3i, 2]);
+        assert_eq!(list![1i, 2, 3].rev_mapped(|x| x + 1), list![4i, 3, 2]);
     }
 
     #[test]
