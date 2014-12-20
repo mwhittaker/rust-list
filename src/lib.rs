@@ -3,6 +3,8 @@
 #![feature(default_type_params)]
 #![macro_escape]
 
+//! [OCaml's List module](http://caml.inria.fr/pub/docs/manual-ocaml/libref/List.html) in rust!
+
 use std::fmt;
 use List::Nil;
 use List::Cons;
@@ -28,117 +30,35 @@ impl<A> List<A> {
 
 impl<A: Clone> List<A> {
     pub fn hd(&self) -> Option<A> {
-        match *self {
-            Nil            => None,
-            Cons(ref x, _) => Some(x.clone())
-        }
+        self.clone().into_hd()
     }
-}
 
-impl<A> List<A> {
-    pub fn into_hd(self) -> Option<A> {
-        match self {
-            Nil        => None,
-            Cons(x, _) => Some(x)
-        }
-    }
-}
-
-impl<A: Clone> List<A> {
     pub fn tl(&self) -> Option<List<A>> {
-        match *self {
-            Nil                 => None,
-            Cons(_, box ref xs) => Some(xs.clone())
-        }
+        self.clone().into_tl()
     }
-}
 
-impl<A> List<A> {
-    pub fn into_tl(self) -> Option<List<A>> {
-        match self {
-            Nil             => None,
-            Cons(_, box xs) => Some(xs)
-        }
-    }
-}
-
-impl<A: Clone> List<A> {
     pub fn nth(&self, i: uint) -> Option<A> {
-        match (i, self) {
-            (_, &Nil)             => None,
-            (0, &Cons(ref x, _))  => Some(x.clone()),
-            (i, &Cons(_, ref xs)) => xs.nth(i - 1)
-        }
+        self.clone().into_nth(i)
     }
-}
 
-impl<A> List<A> {
-    pub fn into_nth(self, i: uint) -> Option<A> {
-        match (i, self) {
-            (_, Nil)             => None,
-            (0, Cons(x, _))      => Some(x),
-            (i, Cons(_, box xs)) => xs.into_nth(i - 1)
-        }
-    }
-}
-
-impl<A: Clone> List<A> {
     pub fn rev(&self) -> List<A> {
-        self.fold_left(|a, x| Cons(x.clone(), box a), Nil)
+        self.clone().reved()
     }
-}
 
-impl<A> List<A> {
-    fn reved(self) -> List<A> {
-        self.folded_left(|a, x| Cons(x, box a), Nil)
-    }
-}
-
-impl<A: Clone> List<A> {
     pub fn append(&self, ys: &List<A>) -> List<A> {
-        self.clone().rev().rev_append(ys)
+        self.clone().appended(ys.clone())
     }
-}
 
-impl<A> List<A> {
-    pub fn appended(self, ys: List<A>) -> List<A> {
-        self.reved().rev_appended(ys)
-    }
-}
-
-impl<A: Clone> List<A> {
     pub fn rev_append(&self, ys: &List<A>) -> List<A> {
-        self.fold_left(|ys, x| Cons(x.clone(), box ys), ys.clone())
+        self.clone().rev_appended(ys.clone())
     }
-}
 
-impl<A> List<A> {
-    pub fn rev_appended(self, ys: List<A>) -> List<A> {
-        self.folded_left(|ys, x| Cons(x, box ys), ys)
-    }
-}
-
-impl<A: Clone> List<A> {
     pub fn concat<A: Clone>(xss: List<&List<A>>) -> List<A> {
-        xss.fold_left(|xs, ys| xs.append(ys.clone()), list![])
+        List::<A>::concated(xss.mapped(|l| l.clone()))
     }
-}
 
-impl<A> List<A> {
-    pub fn concated<A>(xss: List<List<A>>) -> List<A> {
-        xss.folded_left(|xs, ys| xs.appended(ys), list![])
-    }
-}
-
-impl<A: Clone> List<A> {
     pub fn flatten<A: Clone>(xss: List<&List<A>>) -> List<A> {
         List::<A>::concat(xss)
-    }
-}
-
-impl<A> List<A> {
-    pub fn flattened<A>(xss: List<List<A>>) -> List<A> {
-        List::<A>::concated(xss)
     }
 }
 
@@ -165,22 +85,78 @@ impl<A> List<A> {
         }
     }
 
-    pub fn folded_left<B>(self, f: |B, A| -> B, a: B) -> B {
-        match self {
-            Nil => a,
-            Cons(x, xs) => {
-                let a = f(a, x);
-                xs.folded_left(f, a)
-            }
-        }
-    }
-
     pub fn fold_right<B>(&self, a: B, f: |&A, B| -> B) -> B {
         match *self {
             Nil => a,
             Cons(ref x, ref xs) => {
                 let a = xs.fold_right(a, |x, a| f(x, a));
                 f(x, a)
+            }
+        }
+    }
+}
+
+impl<A> List<A> {
+    pub fn into_hd(self) -> Option<A> {
+        match self {
+            Nil        => None,
+            Cons(x, _) => Some(x)
+        }
+    }
+
+    pub fn into_tl(self) -> Option<List<A>> {
+        match self {
+            Nil             => None,
+            Cons(_, box xs) => Some(xs)
+        }
+    }
+
+    pub fn into_nth(self, i: uint) -> Option<A> {
+        match (i, self) {
+            (_, Nil)             => None,
+            (0, Cons(x, _))      => Some(x),
+            (i, Cons(_, box xs)) => xs.into_nth(i - 1)
+        }
+    }
+
+    fn reved(self) -> List<A> {
+        self.folded_left(|a, x| Cons(x, box a), Nil)
+    }
+
+    pub fn appended(self, ys: List<A>) -> List<A> {
+        self.reved().rev_appended(ys)
+    }
+
+    pub fn rev_appended(self, ys: List<A>) -> List<A> {
+        self.folded_left(|ys, x| Cons(x, box ys), ys)
+    }
+
+    pub fn concated<A>(xss: List<List<A>>) -> List<A> {
+        xss.folded_left(|xs, ys| xs.appended(ys), list![])
+    }
+
+    pub fn flattened<A>(xss: List<List<A>>) -> List<A> {
+        List::<A>::concated(xss)
+    }
+
+    pub fn itered(self, f: |A| -> ()) {
+        self.mapped(f);
+    }
+
+    pub fn mapped<B>(self, f: |A| -> B) -> List<B> {
+        self.folded_left(|l, x| Cons(f(x), box l), list![]).reved()
+    }
+
+    pub fn rev_mapped<B>(self, f: |A| -> B) -> List<B> {
+        self.mapped(f).reved()
+    }
+
+    pub fn folded_left<B>(self, f: |B, A| -> B, a: B) -> B {
+        match self {
+            Nil => a,
+            Cons(x, xs) => {
+                let a = f(a, x);
+                xs.folded_left(f, a)
             }
         }
     }
