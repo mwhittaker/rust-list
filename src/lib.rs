@@ -266,7 +266,7 @@ mod tests {
     }
 
     #[test]
-    fn lenght_test() {
+    fn length_test() {
         let nil: List<int> = list![];
         assert_eq!(nil                  .length(), 0);
         assert_eq!(list![1i]            .length(), 1);
