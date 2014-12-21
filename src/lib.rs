@@ -77,43 +77,43 @@ impl<A: Clone> List<A> {
     }
 }
 
-impl<A> List<A> {
+impl<'a, A> List<A> {
     /// `list![a1, ..., an].iter(f)` applies `f` in turn to `a1, ..., an`. It is
     /// equivalent to `{f(a1); f(a2); ...; f(an);}`.
-    pub fn iter(&self, f: |&A| -> ()) {
+    pub fn iter(&'a self, f: |&'a A| -> ()) {
         self.map(f);
     }
 
     /// Same as `iter`, but the function is applied to the index of the elements
     /// as first argument (counting from 0), and the element itself as second
     /// argument.
-    pub fn iteri(&self, f: |int, &A| -> ()) {
+    pub fn iteri(&'a self, f: |int, &'a A| -> ()) {
         self.mapi(f);
     }
 
     /// `list![a1, ..., an].map(f)` applies function `f` to `a1, ..., an`, and
     /// builds the list `list![f(a1), ..., f(an)]` with the results returned by
     /// `f`.
-    pub fn map<B>(&self, f: |&A| -> B) -> List<B> {
+    pub fn map<B>(&'a self, f: |&'a A| -> B) -> List<B> {
         self.fold_left(|l, x| Cons(f(x), box l), list![]).reved()
     }
 
     /// Same as `map`, but the function is applied to the index of the elements
     /// as first argument (counting from 0), and the element itself as second
     /// argument.
-    pub fn mapi<B>(&self, f: |int, &A| -> B) -> List<B> {
+    pub fn mapi<B>(&'a self, f: |int, &'a A| -> B) -> List<B> {
         let mut i = 0i;
         self.map(|x| {i += 1; f(i - 1, x)})
     }
 
     /// `l.rev_map(f)` gives the same results as `l.rev().map(f)`.
-    pub fn rev_map<B>(&self, f: |&A| -> B) -> List<B> {
+    pub fn rev_map<B>(&'a self, f: |&'a A| -> B) -> List<B> {
         self.map(f).reved()
     }
 
     /// `list![b1, ..., bn].fold_left(f, a)` is `f (... (f ( f a b1) b2) ... )
     /// bn`.
-    pub fn fold_left<B>(&self, f: |B, &A| -> B, a: B) -> B {
+    pub fn fold_left<B>(&'a self, f: |B, &'a A| -> B, a: B) -> B {
         match *self {
             Nil => a,
             Cons(ref x, ref xs) => {
@@ -124,7 +124,7 @@ impl<A> List<A> {
     }
 
     /// `list![a1, ..., an].fold_right(f, b)` is `f a1 (f a2 (... (f an b) ...))`.
-    pub fn fold_right<B>(&self, f: |&A, B| -> B, a: B) -> B {
+    pub fn fold_right<B>(&'a self, f: |&'a A, B| -> B, a: B) -> B {
         match *self {
             Nil => a,
             Cons(ref x, ref xs) => {
@@ -137,49 +137,49 @@ impl<A> List<A> {
     /// `list![a1, ..., an].iter2(f, list![b1, ..., bn])` calls in turn
     /// `f(a1, b1), ..., f(an, bn)`. Return `None` if the two lists have
     /// different lengths.
-    pub fn iter2<B>(&self, f: |&A, &B| -> (), ys: &List<B>) -> Option<()> {
+    pub fn iter2<'b, B>(&'a self, f: |&'a A, &'b B| -> (), ys: &'b List<B>) -> Option<()> {
         if self.length() != ys.length() {
             return None;
         }
-        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").itered(|(x, y)| f(x, y)))
+        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").itered(|(x, y)| f(x, y)))
     }
 
     /// `list![a1, ..., an].map2(f, list![b1, ..., bn])` is
     /// `list![f(a1, b1), ..., f(an, bn)]`. Return `None` if the two lists have
     /// different lengths.
-    pub fn map2<B, C>(&self, f: |&A, &B| -> C, ys: &List<B>) -> Option<List<C>> {
+    pub fn map2<'b, B, C>(&'a self, f: |&'a A, &'b B| -> C, ys: &'b List<B>) -> Option<List<C>> {
         if self.length() != ys.length() {
             return None;
         }
-        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").mapped(|(x, y)| f(x, y)))
+        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").mapped(|(x, y)| f(x, y)))
     }
 
     /// `l1.rev_map2(f, l2)` gives the same result as `l1.map2(f, l2).rev()`.
-    pub fn rev_map2<B, C>(&self, f: |&A, &B| -> C, ys: &List<B>) -> Option<List<C>> {
+    pub fn rev_map2<'b, B, C>(&'a self, f: |&'a A, &'b B| -> C, ys: &'b List<B>) -> Option<List<C>> {
         if self.length() != ys.length() {
             return None;
         }
-        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").rev_mapped(|(x, y)| f(x, y)))
+        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").rev_mapped(|(x, y)| f(x, y)))
     }
 
     /// `list![a1, ..., an].fold_left2(f, a, list![b1, ..., bn])` is
     /// `f (... (f (f a a1 b1) a2 b2) ...) an bn`. Return `None` if the two
     /// lists have different length.
-    pub fn fold_left2<B, C>(&self, f: |C, &A, &B| -> C, a: C, ys: &List<B>) -> Option<C> {
+    pub fn fold_left2<'b, B, C>(&'a self, f: |C, &'a A, &'b B| -> C, a: C, ys: &'b List<B>) -> Option<C> {
         if self.length() != ys.length() {
             return None;
         }
-        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").folded_left(|a, (x, y)| f(a, x, y), a))
+        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").folded_left(|a, (x, y)| f(a, x, y), a))
     }
 
     /// `list![a1, ..., an].fold_right2(f, a, list![b1, ..., bn])` is
     /// `f a1 b1 (f a2 b2 (... (f an bn a) ...))`. Return `None` if the two
     /// lists have different length.
-    pub fn fold_right2<B, C>(&self, f: |&A, &B, C| -> C, ys: &List<B>, a: C) -> Option<C> {
+    pub fn fold_right2<'b, B, C>(&'a self, f: |&'a A, &'b B, C| -> C, ys: &'b List<B>, a: C) -> Option<C> {
         if self.length() != ys.length() {
             return None;
         }
-        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").folded_right(|(x, y), a| f(x, y, a), a))
+        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").folded_right(|(x, y), a| f(x, y, a), a))
     }
 }
 
@@ -362,15 +362,6 @@ impl<A> List<A> {
             }
         };
         Some(self.folded_left(f, (ys, list![])).1.reved())
-    }
-}
-
-impl<'a, A> List<A> {
-    fn to_reflist(&'a self) -> List<&'a A>{
-        match *self {
-            Nil => list![],
-            Cons(ref x, box ref xs) => Cons(x, box xs.to_reflist())
-        }
     }
 }
 
