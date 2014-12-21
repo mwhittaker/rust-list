@@ -16,6 +16,23 @@ pub enum List<A> {
     Cons(A, Box<List<A>>)
 }
 
+/// Create a `list::List` containing the arguments.
+///
+/// ```
+/// # #![feature(phase)]
+/// # #[phase(plugin, link)]
+/// # extern crate list;
+/// # use list::List;
+/// # use list::List::{Nil, Cons};
+/// # fn main() {
+/// let nil: List<int> = Nil;
+/// assert_eq!(list![],         nil);
+/// assert_eq!(list![1i],       Cons(1i, box Nil));
+/// assert_eq!(list![1i, 2],    Cons(1i, box Cons(2i, box Nil)));
+/// assert_eq!(list![1i, 2, 3], Cons(1i, box Cons(2i, box Cons(3, box Nil))));
+/// # }
+///
+/// ```
 #[macro_export]
 macro_rules! list[
     ()                       => (Nil);
