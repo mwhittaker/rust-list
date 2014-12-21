@@ -406,6 +406,21 @@ impl<A: fmt::Show> List<A> {
 }
 
 impl<A: fmt::Show> fmt::Show for List<A> {
+    /// ```
+    /// # #![feature(phase)]
+    /// # #[phase(plugin, link)]
+    /// # extern crate list;
+    /// # use list::List;
+    /// # use list::List::{Nil, Cons};
+    /// # fn main() {
+    /// let nil: List<int> = Nil;
+    /// assert_eq!(format!("{}", nil),             "[]");
+    /// assert_eq!(format!("{}", list![1i]),       "[1]");
+    /// assert_eq!(format!("{}", list![1i, 2]),    "[1, 2]");
+    /// assert_eq!(format!("{}", list![1i, 2, 3]), "[1, 2, 3]");
+    /// # }
+    ///
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_string())
     }
