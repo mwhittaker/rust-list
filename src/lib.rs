@@ -99,14 +99,14 @@ impl<'a, A> List<A> {
     /// `list![a1, ..., an].iter(f)` applies `f` in turn to `a1, ..., an`. It is
     /// equivalent to `{f(a1); f(a2); ...; f(an);}`.
     pub fn iter(&'a self, f: |&'a A| -> ()) {
-        self.map(f);
+        self.map(|x| x).itered(f)
     }
 
     /// Same as `iter`, but the function is applied to the index of the elements
     /// as first argument (counting from 0), and the element itself as second
     /// argument.
     pub fn iteri(&'a self, f: |int, &'a A| -> ()) {
-        self.mapi(f);
+        self.map(|x| x).iteried(f)
     }
 
     /// `list![a1, ..., an].map(f)` applies function `f` to `a1, ..., an`, and
@@ -120,13 +120,12 @@ impl<'a, A> List<A> {
     /// as first argument (counting from 0), and the element itself as second
     /// argument.
     pub fn mapi<B>(&'a self, f: |int, &'a A| -> B) -> List<B> {
-        let mut i = 0i;
-        self.map(|x| {i += 1; f(i - 1, x)})
+        self.map(|x| x).mapied(f)
     }
 
     /// `l.rev_map(f)` gives the same results as `l.rev().map(f)`.
     pub fn rev_map<B>(&'a self, f: |&'a A| -> B) -> List<B> {
-        self.map(f).reved()
+        self.map(|x| x).rev_mapped(f)
     }
 
     /// `list![b1, ..., bn].fold_left(f, a)` is `f (... (f ( f a b1) b2) ... )
@@ -143,61 +142,40 @@ impl<'a, A> List<A> {
 
     /// `list![a1, ..., an].fold_right(f, b)` is `f a1 (f a2 (... (f an b) ...))`.
     pub fn fold_right<B>(&'a self, f: |&'a A, B| -> B, a: B) -> B {
-        match *self {
-            Nil => a,
-            Cons(ref x, ref xs) => {
-                let a = xs.fold_right(|x, a| f(x, a), a);
-                f(x, a)
-            }
-        }
+        self.map(|x| x).folded_right(f, a)
     }
 
     /// `list![a1, ..., an].iter2(f, list![b1, ..., bn])` calls in turn
     /// `f(a1, b1), ..., f(an, bn)`. Return `None` if the two lists have
     /// different lengths.
     pub fn iter2<'b, B>(&'a self, f: |&'a A, &'b B| -> (), ys: &'b List<B>) -> Option<()> {
-        if self.length() != ys.length() {
-            return None;
-        }
-        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").itered(|(x, y)| f(x, y)))
+        self.map(|x| x).itered2(f, ys.map(|y| y))
     }
 
     /// `list![a1, ..., an].map2(f, list![b1, ..., bn])` is
     /// `list![f(a1, b1), ..., f(an, bn)]`. Return `None` if the two lists have
     /// different lengths.
     pub fn map2<'b, B, C>(&'a self, f: |&'a A, &'b B| -> C, ys: &'b List<B>) -> Option<List<C>> {
-        if self.length() != ys.length() {
-            return None;
-        }
-        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").mapped(|(x, y)| f(x, y)))
+        self.map(|x| x).mapped2(f, ys.map(|y| y))
     }
 
     /// `l1.rev_map2(f, l2)` gives the same result as `l1.map2(f, l2).rev()`.
     pub fn rev_map2<'b, B, C>(&'a self, f: |&'a A, &'b B| -> C, ys: &'b List<B>) -> Option<List<C>> {
-        if self.length() != ys.length() {
-            return None;
-        }
-        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").rev_mapped(|(x, y)| f(x, y)))
+        self.map(|x| x).rev_mapped2(f, ys.map(|y| y))
     }
 
     /// `list![a1, ..., an].fold_left2(f, a, list![b1, ..., bn])` is
     /// `f (... (f (f a a1 b1) a2 b2) ...) an bn`. Return `None` if the two
     /// lists have different length.
     pub fn fold_left2<'b, B, C>(&'a self, f: |C, &'a A, &'b B| -> C, a: C, ys: &'b List<B>) -> Option<C> {
-        if self.length() != ys.length() {
-            return None;
-        }
-        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").folded_left(|a, (x, y)| f(a, x, y), a))
+        self.map(|x| x).folded_left2(f, a, ys.map(|y| y))
     }
 
     /// `list![a1, ..., an].fold_right2(f, a, list![b1, ..., bn])` is
     /// `f a1 b1 (f a2 b2 (... (f an bn a) ...))`. Return `None` if the two
     /// lists have different length.
     pub fn fold_right2<'b, B, C>(&'a self, f: |&'a A, &'b B, C| -> C, ys: &'b List<B>, a: C) -> Option<C> {
-        if self.length() != ys.length() {
-            return None;
-        }
-        Some(self.map(|x| x).combined(ys.map(|y| y)).expect("impossible").folded_right(|(x, y), a| f(x, y, a), a))
+        self.map(|x| x).folded_right2(f, ys.map(|y| y), a)
     }
 }
 
