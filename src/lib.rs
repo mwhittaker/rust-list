@@ -133,6 +133,54 @@ impl<A> List<A> {
             }
         }
     }
+
+    /// `list![a1, ..., an].iter2(f, list![b1, ..., bn])` calls in turn
+    /// `f(a1, b1), ..., f(an, bn)`. Return `None` if the two lists have
+    /// different lengths.
+    pub fn iter2<B>(&self, f: |&A, &B| -> (), ys: &List<B>) -> Option<()> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").itered(|(x, y)| f(x, y)))
+    }
+
+    /// `list![a1, ..., an].map2(f, list![b1, ..., bn])` is
+    /// `list![f(a1, b1), ..., f(an, bn)]`. Return `None` if the two lists have
+    /// different lengths.
+    pub fn map2<B, C>(&self, f: |&A, &B| -> C, ys: &List<B>) -> Option<List<C>> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").mapped(|(x, y)| f(x, y)))
+    }
+
+    /// `l1.rev_map2(f, l2)` gives the same result as `l1.map2(f, l2).rev()`.
+    pub fn rev_map2<B, C>(&self, f: |&A, &B| -> C, ys: &List<B>) -> Option<List<C>> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").rev_mapped(|(x, y)| f(x, y)))
+    }
+
+    /// `list![a1, ..., an].fold_left2(f, a, list![b1, ..., bn])` is
+    /// `f (... (f (f a a1 b1) a2 b2) ...) an bn`. Return `None` if the two
+    /// lists have different length.
+    pub fn fold_left2<B, C>(&self, f: |C, &A, &B| -> C, a: C, ys: &List<B>) -> Option<C> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").folded_left(|a, (x, y)| f(a, x, y), a))
+    }
+
+    /// `list![a1, ..., an].fold_right2(f, a, list![b1, ..., bn])` is
+    /// `f a1 b1 (f a2 b2 (... (f an bn a) ...))`. Return `None` if the two
+    /// lists have different length.
+    pub fn fold_right2<B, C>(&self, f: |&A, &B, C| -> C, ys: &List<B>, a: C) -> Option<C> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.to_reflist().combined(ys.to_reflist()).expect("impossible").folded_right(|(x, y), a| f(x, y, a), a))
+    }
 }
 
 impl<A: Clone, B: Clone> List<(A, B)> {
@@ -250,6 +298,46 @@ impl<A> List<A> {
             }
         }
     }
+
+    /// Non-borrowing implementation of `iter2`.
+    pub fn itered2<B>(self, f: |A, B| -> (), ys: List<B>) -> Option<()> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.combined(ys).expect("impossible").itered(|(x, y)| f(x, y)))
+    }
+
+    /// Non-borrowing implementation of `map2`.
+    pub fn mapped2<B, C>(self, f: |A, B| -> C, ys: List<B>) -> Option<List<C>> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.combined(ys).expect("impossible").mapped(|(x, y)| f(x, y)))
+    }
+
+    /// Non-borrowing implementation of `rev_map2`.
+    pub fn rev_mapped2<B, C>(self, f: |A, B| -> C, ys: List<B>) -> Option<List<C>> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.combined(ys).expect("impossible").rev_mapped(|(x, y)| f(x, y)))
+    }
+
+    /// Non-borrowing implementation of `fold_left2`.
+    pub fn folded_left2<B, C>(self, f: |C, A, B| -> C, a: C, ys: List<B>) -> Option<C> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.combined(ys).expect("impossible").folded_left(|a, (x, y)| f(a, x, y), a))
+    }
+
+    /// Non-borrowing implementation of `fold_right2`.
+    pub fn folded_right2<B, C>(self, f: |A, B, C| -> C, ys: List<B>, a: C) -> Option<C> {
+        if self.length() != ys.length() {
+            return None;
+        }
+        Some(self.combined(ys).expect("impossible").folded_right(|(x, y), a| f(x, y, a), a))
+    }
 }
 
 impl<A, B> List<(A, B)> {
@@ -274,6 +362,15 @@ impl<A> List<A> {
             }
         };
         Some(self.folded_left(f, (ys, list![])).1.reved())
+    }
+}
+
+impl<'a, A> List<A> {
+    fn to_reflist(&'a self) -> List<&'a A>{
+        match *self {
+            Nil => list![],
+            Cons(ref x, box ref xs) => Cons(x, box xs.to_reflist())
+        }
     }
 }
 
@@ -748,6 +845,142 @@ mod tests {
         assert_eq!(list![1i, 2, 3, 4].folded_right(|x, a| a + x, 0), 10);
         assert_eq!(list![1i, 2, 3, 4].folded_right(|x, a| a * x, 1), 24);
         assert_eq!(list!["a", "b", "c"].folded_right(|x, a| a + x, String::from_str("")), String::from_str("cba"));
+    }
+
+    #[test]
+    fn iter2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        let mut i = 0i;
+
+        assert_eq!(list![1i, 2, 3].iter2(|x, y| i += *x * *y, &list![4i, 5, 6, 7]), None);
+        assert_eq!(nil1           .iter2(|x, y| i += *x * *y, &nil2),               Some(()));
+        assert_eq!(list![1i, 2, 3].iter2(|x, y| i += *x * *y, &list![4i, 5, 6]),    Some(()));
+        assert_eq!(i, 32);
+    }
+
+    #[test]
+    fn itered2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        let mut i = 0i;
+
+        assert_eq!(list![1i, 2, 3].itered2(|x, y| i += x * y, list![4i, 5, 6, 7]), None);
+        assert_eq!(nil1           .itered2(|x, y| i += x * y, nil2),               Some(()));
+        assert_eq!(list![1i, 2, 3].itered2(|x, y| i += x * y, list![4i, 5, 6]),    Some(()));
+        assert_eq!(i, 32);
+    }
+
+    #[test]
+    fn map2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1           .map2(|x, y| *x + *y, &nil2),               Some(list![]));
+        assert_eq!(nil1           .map2(|x, y| *x + *y, &list![1i]),          None);
+        assert_eq!(list![1i]      .map2(|x, y| *x + *y, &nil2),               None);
+        assert_eq!(list![1i, 2, 3].map2(|x, y| *x + *y, &list![-1i, -2, -3]), Some(list![0, 0, 0]));
+        assert_eq!(list![1i, 2, 3].map2(|x, y| *x + *y, &list![1i, 2, 3]),    Some(list![2, 4, 6]));
+    }
+
+    #[test]
+    fn mapped2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1.mapped2(|x, y| x + y, nil2), Some(list![]));
+
+        let nil1: List<int> = list![];
+        assert_eq!(nil1.mapped2(|x, y| x + y, list![1i]), None);
+
+        let nil2: List<int> = list![];
+        assert_eq!(list![1i].mapped2(|x, y| x + y, nil2), None);
+
+        assert_eq!(list![1i, 2, 3].mapped2(|x, y| x + y, list![-1i, -2, -3]), Some(list![0, 0, 0]));
+        assert_eq!(list![1i, 2, 3].mapped2(|x, y| x + y, list![1i, 2, 3]),    Some(list![2, 4, 6]));
+    }
+
+    #[test]
+    fn rev_map2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1           .rev_map2(|x, y| *x + *y, &nil2),               Some(list![]));
+        assert_eq!(nil1           .rev_map2(|x, y| *x + *y, &list![1i]),          None);
+        assert_eq!(list![1i]      .rev_map2(|x, y| *x + *y, &nil2),               None);
+        assert_eq!(list![1i, 2, 3].rev_map2(|x, y| *x + *y, &list![-1i, -2, -3]), Some(list![0, 0, 0]));
+        assert_eq!(list![1i, 2, 3].rev_map2(|x, y| *x + *y, &list![1i, 2, 3]),    Some(list![6, 4, 2]));
+    }
+
+    #[test]
+    fn rev_mapped2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1.rev_mapped2(|x, y| x + y, nil2), Some(list![]));
+
+        let nil1: List<int> = list![];
+        assert_eq!(nil1.rev_mapped2(|x, y| x + y, list![1i]), None);
+
+        let nil2: List<int> = list![];
+        assert_eq!(list![1i].rev_mapped2(|x, y| x + y, nil2), None);
+
+        assert_eq!(list![1i, 2, 3].rev_mapped2(|x, y| x + y, list![-1i, -2, -3]), Some(list![0, 0, 0]));
+        assert_eq!(list![1i, 2, 3].rev_mapped2(|x, y| x + y, list![1i, 2, 3]),    Some(list![6, 4, 2]));
+    }
+
+    #[test]
+    fn fold_left2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1                .fold_left2(|a, x, y| a + *x + *y, 0i,                   &nil2),                 Some(0));
+        assert_eq!(nil1                .fold_left2(|a, x, y| a + *x + *y, 0i,                   &list![1i]),            None);
+        assert_eq!(list![1i]           .fold_left2(|a, x, y| a + *x + *y, 0i,                   &nil2),                 None);
+        assert_eq!(list![1i, 2, 3]     .fold_left2(|a, x, y| a + *x + *y, 0i,                   &list![-1i, -2, -3]),   Some(0));
+        assert_eq!(list![1i, 2, 3]     .fold_left2(|a, x, y| a + *x + *y, 0i,                   &list![1i, 2, 3]),      Some(12));
+        assert_eq!(list!["a", "b", "c"].fold_left2(|a, x, y| a + *x + *y, String::from_str(""), &list!["d", "e", "f"]), Some(String::from_str("adbecf")));
+    }
+
+    #[test]
+    fn folded_left2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1.folded_left2(|a, x, y| a + x + y, 0i, nil2), Some(0));
+
+        let nil1: List<int> = list![];
+        assert_eq!(nil1.folded_left2(|a, x, y| a + x + y, 0i, list![1i]), None);
+
+        let nil2: List<int> = list![];
+        assert_eq!(list![1i].folded_left2(|a, x, y| a + x + y, 0i, nil2), None);
+
+        assert_eq!(list![1i, 2, 3].folded_left2(|a, x, y| a + x + y, 0i, list![-1i, -2, -3]), Some(0));
+        assert_eq!(list![1i, 2, 3].folded_left2(|a, x, y| a + x + y, 0i, list![1i, 2, 3]),    Some(12));
+        assert_eq!(list!["a", "b", "c"].folded_left2(|a, x, y| a + x + y, String::from_str(""), list!["d", "e", "f"]), Some(String::from_str("adbecf")));
+    }
+
+    #[test]
+    fn fold_right2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1                .fold_right2(|x, y, a| a + *x + *y, &nil2,                 0i),                   Some(0));
+        assert_eq!(nil1                .fold_right2(|x, y, a| a + *x + *y, &list![1i],            0i),                   None);
+        assert_eq!(list![1i]           .fold_right2(|x, y, a| a + *x + *y, &nil2,                 0i),                   None);
+        assert_eq!(list![1i, 2, 3]     .fold_right2(|x, y, a| a + *x + *y, &list![-1i, -2, -3],   0i),                   Some(0));
+        assert_eq!(list![1i, 2, 3]     .fold_right2(|x, y, a| a + *x + *y, &list![1i, 2, 3],      0i),                   Some(12));
+        assert_eq!(list!["a", "b", "c"].fold_right2(|x, y, a| a + *x + *y, &list!["d", "e", "f"], String::from_str("")), Some(String::from_str("cfbead")));
+    }
+
+    #[test]
+    fn folded_right2_test() {
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+        assert_eq!(nil1.folded_right2(|x, y, a| a + x + y, nil2, 0i), Some(0));
+
+        let nil1: List<int> = list![];
+        assert_eq!(nil1.folded_right2(|x, y, a| a + x + y, list![1i], 0i), None);
+
+        let nil2: List<int> = list![];
+        assert_eq!(list![1i].folded_right2(|x, y, a| a + x + y, nil2, 0i), None);
+
+        assert_eq!(list![1i, 2, 3].folded_right2(|x, y, a| a + x + y, list![-1i, -2, -3], 0i), Some(0));
+        assert_eq!(list![1i, 2, 3].folded_right2(|x, y, a| a + x + y, list![1i, 2, 3], 0i),    Some(12));
+        assert_eq!(list!["a", "b", "c"].folded_right2(|x, y, a| a + x + y, list!["d", "e", "f"], String::from_str("")), Some(String::from_str("cfbead")));
     }
 
     #[test]
