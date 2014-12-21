@@ -10,6 +10,7 @@ use std::iter;
 use List::Nil;
 use List::Cons;
 
+/// Rust implementation of OCaml's `'a list`.
 #[deriving(Clone, PartialEq, Eq)]
 pub enum List<A> {
     Nil,
