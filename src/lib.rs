@@ -281,6 +281,14 @@ impl<A: Clone> List<A> {
     pub fn combine<B: Clone>(&self, ys: &List<B>) -> Option<List<(A, B)>> {
         self.clone().combined(ys.clone())
     }
+
+    /// Merge two lists: Assuming that `l1` and `l2` are sorted according to the
+    /// comparison function `cmp`, `l1.merge(cmp, l2)` will return a sorted list
+    /// containing all the elemnts of `l1` and `l2`. If several elements compare
+    /// equal, the elements of `l1` will be before the elements of `l2`.
+    pub fn merge(&self, cmp: |&A, &A| -> int, ys: &List<A>) -> List<A> {
+        self.clone().merged(cmp, ys.clone())
+    }
 }
 
 impl<A> List<A> {
@@ -526,6 +534,25 @@ impl<A> List<A> {
             }
         };
         Some(self.folded_left(f, (ys, list![])).1.reved())
+    }
+
+    /// Non-borrowing implementation of `merge`.
+    pub fn merged(self, cmp: |&A, &A| -> int, ys: List<A>) -> List<A> {
+        fn merged_help<A>(cmp: |&A, &A| -> int, xs: List<A>, ys: List<A>, a: List<A>) -> List<A> {
+            match (xs, ys) {
+                (Cons(x, box xs), Cons(y, box ys)) => {
+                    if cmp(&x, &y) <= 0 {
+                        merged_help(cmp, xs, Cons(y, box ys), Cons(x, box a))
+                    } else {
+                        merged_help(cmp, Cons(x, box xs), ys, Cons(y, box a))
+                    }
+                },
+                (Nil, Nil) => a.reved(),
+                (Nil, ys)  => a.reved().appended(ys),
+                (xs, Nil)  => a.reved().appended(xs)
+            }
+        }
+        merged_help(cmp, self, ys, list![])
     }
 }
 
@@ -1808,6 +1835,110 @@ mod tests {
         assert_eq!(list![1i]      .combined(list![1.0f32]),           Some(list![(1, 1.0)]));
         assert_eq!(list![1i, 2]   .combined(list![1.0f32, 2.0]),      Some(list![(1, 1.0), (2, 2.0)]));
         assert_eq!(list![1i, 2, 3].combined(list![1.0f32, 2.0, 3.0]), Some(list![(1, 1.0), (2, 2.0), (3, 3.0)]));
+    }
+
+    #[test]
+    fn merge_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+
+        assert_eq!(nil1                 .merge(|x, y| cmp(x, y), &nil2),                  list![]);
+        assert_eq!(nil1                 .merge(|x, y| cmp(x, y), &list![1i]),             list![1]);
+        assert_eq!(list![1i]            .merge(|x, y| cmp(x, y), &nil2),                  list![1]);
+        assert_eq!(nil1                 .merge(|x, y| cmp(x, y), &list![1i, 2, 3, 4, 5]), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].merge(|x, y| cmp(x, y), &nil2),                  list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3]      .merge(|x, y| cmp(x, y), &list![4i, 5, 6]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![4i, 5, 6]      .merge(|x, y| cmp(x, y), &list![1i, 2, 3]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![1i, 2, 3]      .merge(|x, y| cmp(x, y), &list![4i, 5]),          list![1, 2, 3, 4, 5]);
+        assert_eq!(list![4i, 5]         .merge(|x, y| cmp(x, y), &list![1i, 2, 3]),       list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 3, 5]      .merge(|x, y| cmp(x, y), &list![2i, 4, 6]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![2i, 4, 6]      .merge(|x, y| cmp(x, y), &list![1i, 3, 5]),       list![1, 2, 3, 4, 5, 6]);
+
+        assert_eq!(nil1                                .merge(|x, y| cmp(x, y), &nil2),                                 list![]);
+        assert_eq!(nil1                                .merge(|x, y| cmp(x, y), &list![1i, 1]),                         list![1, 1]);
+        assert_eq!(list![1i, 1]                        .merge(|x, y| cmp(x, y), &nil2),                                 list![1, 1]);
+        assert_eq!(nil1                                .merge(|x, y| cmp(x, y), &list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5]), list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].merge(|x, y| cmp(x, y), &nil2),                                 list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3]            .merge(|x, y| cmp(x, y), &list![4i, 4, 5, 5, 6, 6]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+        assert_eq!(list![4i, 4, 5, 5, 6, 6]            .merge(|x, y| cmp(x, y), &list![1i, 1, 2, 2, 3, 3]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3]            .merge(|x, y| cmp(x, y), &list![4i, 4, 5, 5]),                   list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![4i, 4, 5, 5]                  .merge(|x, y| cmp(x, y), &list![1i, 1, 2, 2, 3, 3]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![1i, 1, 3, 3, 5, 5]            .merge(|x, y| cmp(x, y), &list![2i, 2, 4, 4, 6, 6]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+        assert_eq!(list![2i, 2, 4, 4, 6, 6]            .merge(|x, y| cmp(x, y), &list![1i, 1, 3, 3, 5, 5]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+
+        assert_eq!(nil1                 .merge(|_, _| 0, &nil2),                  list![]);
+        assert_eq!(nil1                 .merge(|_, _| 0, &list![1i]),             list![1]);
+        assert_eq!(list![1i]            .merge(|_, _| 0, &nil2),                  list![1]);
+        assert_eq!(nil1                 .merge(|_, _| 0, &list![1i, 2, 3, 4, 5]), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].merge(|_, _| 0, &nil2),                  list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3]      .merge(|_, _| 0, &list![4i, 5, 6]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![4i, 5, 6]      .merge(|_, _| 0, &list![1i, 2, 3]),       list![4, 5, 6, 1, 2, 3]);
+        assert_eq!(list![1i, 2, 3]      .merge(|_, _| 0, &list![4i, 5]),          list![1, 2, 3, 4, 5]);
+        assert_eq!(list![4i, 5]         .merge(|_, _| 0, &list![1i, 2, 3]),       list![4, 5, 1, 2, 3]);
+        assert_eq!(list![1i, 3, 5]      .merge(|_, _| 0, &list![2i, 4, 6]),       list![1, 3, 5, 2, 4, 6]);
+        assert_eq!(list![2i, 4, 6]      .merge(|_, _| 0, &list![1i, 3, 5]),       list![2, 4, 6, 1, 3, 5]);
+    }
+
+    #[test]
+    fn merged_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil1: List<int> = list![];
+        let nil2: List<int> = list![];
+
+        assert_eq!(nil1.clone()         .merged(|x, y| cmp(x, y), nil2.clone()),          list![]);
+        assert_eq!(nil1.clone()         .merged(|x, y| cmp(x, y), list![1i]),             list![1]);
+        assert_eq!(list![1i]            .merged(|x, y| cmp(x, y), nil2.clone()),          list![1]);
+        assert_eq!(nil1.clone()         .merged(|x, y| cmp(x, y), list![1i, 2, 3, 4, 5]), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].merged(|x, y| cmp(x, y), nil2.clone()),          list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3]      .merged(|x, y| cmp(x, y), list![4i, 5, 6]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![4i, 5, 6]      .merged(|x, y| cmp(x, y), list![1i, 2, 3]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![1i, 2, 3]      .merged(|x, y| cmp(x, y), list![4i, 5]),          list![1, 2, 3, 4, 5]);
+        assert_eq!(list![4i, 5]         .merged(|x, y| cmp(x, y), list![1i, 2, 3]),       list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 3, 5]      .merged(|x, y| cmp(x, y), list![2i, 4, 6]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![2i, 4, 6]      .merged(|x, y| cmp(x, y), list![1i, 3, 5]),       list![1, 2, 3, 4, 5, 6]);
+
+        assert_eq!(nil1.clone()                        .merged(|x, y| cmp(x, y), nil2.clone()),                         list![]);
+        assert_eq!(nil1.clone()                        .merged(|x, y| cmp(x, y), list![1i, 1]),                         list![1, 1]);
+        assert_eq!(list![1i, 1]                        .merged(|x, y| cmp(x, y), nil2.clone()),                         list![1, 1]);
+        assert_eq!(nil1.clone()                        .merged(|x, y| cmp(x, y), list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5]), list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].merged(|x, y| cmp(x, y), nil2.clone()),                         list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3]            .merged(|x, y| cmp(x, y), list![4i, 4, 5, 5, 6, 6]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+        assert_eq!(list![4i, 4, 5, 5, 6, 6]            .merged(|x, y| cmp(x, y), list![1i, 1, 2, 2, 3, 3]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3]            .merged(|x, y| cmp(x, y), list![4i, 4, 5, 5]),                   list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![4i, 4, 5, 5]                  .merged(|x, y| cmp(x, y), list![1i, 1, 2, 2, 3, 3]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+        assert_eq!(list![1i, 1, 3, 3, 5, 5]            .merged(|x, y| cmp(x, y), list![2i, 2, 4, 4, 6, 6]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+        assert_eq!(list![2i, 2, 4, 4, 6, 6]            .merged(|x, y| cmp(x, y), list![1i, 1, 3, 3, 5, 5]),             list![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+
+        assert_eq!(nil1.clone()         .merged(|_, _| 0, nil2.clone()),          list![]);
+        assert_eq!(nil1.clone()         .merged(|_, _| 0, list![1i]),             list![1]);
+        assert_eq!(list![1i]            .merged(|_, _| 0, nil2.clone()),          list![1]);
+        assert_eq!(nil1.clone()         .merged(|_, _| 0, list![1i, 2, 3, 4, 5]), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].merged(|_, _| 0, nil2.clone()),          list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3]      .merged(|_, _| 0, list![4i, 5, 6]),       list![1, 2, 3, 4, 5, 6]);
+        assert_eq!(list![4i, 5, 6]      .merged(|_, _| 0, list![1i, 2, 3]),       list![4, 5, 6, 1, 2, 3]);
+        assert_eq!(list![1i, 2, 3]      .merged(|_, _| 0, list![4i, 5]),          list![1, 2, 3, 4, 5]);
+        assert_eq!(list![4i, 5]         .merged(|_, _| 0, list![1i, 2, 3]),       list![4, 5, 1, 2, 3]);
+        assert_eq!(list![1i, 3, 5]      .merged(|_, _| 0, list![2i, 4, 6]),       list![1, 3, 5, 2, 4, 6]);
+        assert_eq!(list![2i, 4, 6]      .merged(|_, _| 0, list![1i, 3, 5]),       list![2, 4, 6, 1, 3, 5]);
     }
 
     #[test]
