@@ -282,6 +282,25 @@ impl<A: Clone> List<A> {
         self.clone().combined(ys.clone())
     }
 
+    /// Sort a list in increasing order according to a comparison function. The
+    /// comparison function must return 0 if the arguments compare as equal, a
+    /// positive integer if the first is greater, and a negative integer if the
+    /// first is smaller. The resulting list is sorted in increasing order.
+    pub fn sort(self, cmp: |&A, &A| -> int) -> List<A> {
+        self.clone().sorted(cmp)
+    }
+
+    /// Same as `sort` but the sorting algorithm is guaranteed to be stable
+    /// (i.e. elements that compare equal are kept in their original order).
+    pub fn stable_sort(self, cmp: |&A, &A| -> int) -> List<A> {
+        self.clone().stable_sorted(cmp)
+    }
+
+    /// Same as `sort` or `stable_sort`, whichever is faster on typical input.
+    pub fn fast_sort(self, cmp: |&A, &A| -> int) -> List<A> {
+        self.clone().fast_sorted(cmp)
+    }
+
     /// Merge two lists: Assuming that `l1` and `l2` are sorted according to the
     /// comparison function `cmp`, `l1.merge(cmp, l2)` will return a sorted list
     /// containing all the elemnts of `l1` and `l2`. If several elements compare
@@ -534,6 +553,46 @@ impl<A> List<A> {
             }
         };
         Some(self.folded_left(f, (ys, list![])).1.reved())
+    }
+
+    // `l.divided()` divides `l` in half. That is,
+    // `list![x_0, ..., x_n].divided()` is `(list![x_0, ..., x_m],
+    // list![x_m+1, ..., x_n])` where `m == (l.length() - 1) / 2`
+    fn divided(self) -> (List<A>, List<A>) {
+        let mid = (self.length() - 1) / 2;
+        let f = |(i, l, r): (int, List<A>, List<A>), x: A| {
+            if i <= mid {
+                (i + 1, Cons(x, box l), r)
+            } else {
+                (i + 1, l, Cons(x, box r))
+            }
+        };
+        let (_, l, r) = self.folded_left(f, (0, list![], list![]));
+        (l.reved(), r.reved())
+    }
+
+    /// Non-borrowing implementation of `sort`.
+    pub fn sorted(self, cmp: |&A, &A| -> int) -> List<A> {
+        match self {
+            Nil => Nil,
+            Cons(x, box Nil) => Cons(x, box Nil),
+            xs => {
+                let (l, r) = xs.divided();
+                let l = l.sorted(|x, y| cmp(x, y));
+                let r = r.sorted(|x, y| cmp(x, y));
+                l.merged(|x, y| cmp(x, y), r)
+            }
+        }
+    }
+
+    /// Non-borrowing implementation of `stable_sort`.
+    pub fn stable_sorted(self, cmp: |&A, &A| -> int) -> List<A> {
+        self.sorted(cmp)
+    }
+
+    /// Non-borrowing implementation of `fast_sort`.
+    pub fn fast_sorted(self, cmp: |&A, &A| -> int) -> List<A> {
+        self.sorted(cmp)
     }
 
     /// Non-borrowing implementation of `merge`.
@@ -1835,6 +1894,893 @@ mod tests {
         assert_eq!(list![1i]      .combined(list![1.0f32]),           Some(list![(1, 1.0)]));
         assert_eq!(list![1i, 2]   .combined(list![1.0f32, 2.0]),      Some(list![(1, 1.0), (2, 2.0)]));
         assert_eq!(list![1i, 2, 3].combined(list![1.0f32, 2.0, 3.0]), Some(list![(1, 1.0), (2, 2.0), (3, 3.0)]));
+    }
+
+    #[test]
+    fn divided_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil                  .divided(), (list![],        list![]));
+        assert_eq!(list![1i]            .divided(), (list![1],       list![]));
+        assert_eq!(list![1i, 2]         .divided(), (list![1],       list![2]));
+        assert_eq!(list![1i, 2, 3]      .divided(), (list![1, 2],    list![3]));
+        assert_eq!(list![1i, 2, 3, 4]   .divided(), (list![1, 2],    list![3, 4]));
+        assert_eq!(list![1i, 2, 3, 4, 5].divided(), (list![1, 2, 3], list![4, 5]));
+    }
+
+    #[test]
+    fn sort_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil            .sort(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .sort(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .sort(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .sort(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![0i, 1, 2, 3, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 2, 4, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 2, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 4, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 2, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 3, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 3, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 4, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 1, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 4, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 1, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 3, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 2, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 4, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 1, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 4, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 1, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 2, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 2, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 3, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 1, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 3, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 1, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 2, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 3, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 4, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 2, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 4, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 2, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 3, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 3, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 4, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 0, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 0, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 3, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 2, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 4, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 0, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 4, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 0, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 2, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 2, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 3, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 0, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 3, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 0, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 2, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 3, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 4, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 1, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 4, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 1, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 3, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 3, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 4, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 0, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 4, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 0, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 3, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 1, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 4, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 0, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 4, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 0, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 1, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 1, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 3, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 0, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 3, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 0, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 1, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 2, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 4, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 1, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 4, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 1, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 2, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 2, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 4, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 0, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 4, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 0, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 2, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 1, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 4, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 0, 4].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 4, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 0, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 1, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 1, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 2, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 0, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 2, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 0, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 1, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 2, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 3, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 1, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 3, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 1, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 2, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 2, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 3, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 0, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 3, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 0, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 2, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 1, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 3, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 0, 3].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 3, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 0, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 1, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 1, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 2, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 0, 2].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 2, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 0, 1].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 1, 0].sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn sorted_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil            .sorted(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .sorted(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .sorted(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .sorted(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![0i, 1, 2, 3, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 2, 4, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 2, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 4, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 2, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 3, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 3, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 4, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 1, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 4, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 1, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 3, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 2, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 4, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 1, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 4, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 1, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 2, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 2, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 3, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 1, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 3, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 1, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 2, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 3, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 4, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 2, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 4, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 2, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 3, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 3, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 4, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 0, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 0, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 3, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 2, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 4, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 0, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 4, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 0, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 2, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 2, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 3, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 0, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 3, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 0, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 2, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 3, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 4, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 1, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 4, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 1, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 3, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 3, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 4, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 0, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 4, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 0, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 3, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 1, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 4, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 0, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 4, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 0, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 1, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 1, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 3, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 0, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 3, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 0, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 1, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 2, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 4, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 1, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 4, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 1, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 2, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 2, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 4, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 0, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 4, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 0, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 2, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 1, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 4, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 0, 4].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 4, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 0, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 1, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 1, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 2, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 0, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 2, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 0, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 1, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 2, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 3, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 1, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 3, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 1, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 2, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 2, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 3, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 0, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 3, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 0, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 2, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 1, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 3, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 0, 3].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 3, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 0, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 1, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 1, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 2, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 0, 2].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 2, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 0, 1].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 1, 0].sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn stable_sort_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil            .stable_sort(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .stable_sort(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .stable_sort(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .stable_sort(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].stable_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].stable_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].stable_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].stable_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].stable_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].stable_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![0i, 1, 2, 3, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 2, 4, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 2, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 4, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 2, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 3, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 3, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 4, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 1, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 4, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 1, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 3, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 2, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 4, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 1, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 4, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 1, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 2, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 2, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 3, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 1, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 3, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 1, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 2, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 3, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 4, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 2, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 4, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 2, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 3, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 3, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 4, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 0, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 0, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 3, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 2, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 4, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 0, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 4, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 0, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 2, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 2, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 3, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 0, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 3, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 0, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 2, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 3, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 4, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 1, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 4, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 1, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 3, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 3, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 4, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 0, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 4, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 0, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 3, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 1, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 4, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 0, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 4, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 0, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 1, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 1, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 3, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 0, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 3, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 0, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 1, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 2, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 4, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 1, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 4, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 1, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 2, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 2, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 4, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 0, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 4, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 0, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 2, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 1, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 4, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 0, 4].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 4, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 0, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 1, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 1, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 2, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 0, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 2, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 0, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 1, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 2, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 3, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 1, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 3, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 1, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 2, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 2, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 3, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 0, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 3, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 0, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 2, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 1, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 3, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 0, 3].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 3, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 0, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 1, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 1, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 2, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 0, 2].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 2, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 0, 1].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 1, 0].stable_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn stable_sorted_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil            .stable_sorted(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .stable_sorted(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .stable_sorted(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .stable_sorted(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].stable_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].stable_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].stable_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].stable_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].stable_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].stable_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![0i, 1, 2, 3, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 2, 4, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 2, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 4, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 2, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 3, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 3, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 4, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 1, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 4, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 1, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 3, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 2, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 4, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 1, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 4, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 1, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 2, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 2, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 3, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 1, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 3, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 1, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 2, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 3, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 4, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 2, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 4, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 2, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 3, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 3, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 4, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 0, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 0, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 3, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 2, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 4, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 0, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 4, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 0, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 2, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 2, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 3, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 0, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 3, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 0, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 2, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 3, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 4, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 1, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 4, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 1, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 3, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 3, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 4, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 0, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 4, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 0, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 3, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 1, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 4, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 0, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 4, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 0, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 1, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 1, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 3, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 0, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 3, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 0, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 1, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 2, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 4, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 1, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 4, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 1, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 2, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 2, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 4, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 0, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 4, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 0, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 2, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 1, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 4, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 0, 4].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 4, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 0, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 1, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 1, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 2, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 0, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 2, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 0, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 1, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 2, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 3, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 1, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 3, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 1, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 2, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 2, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 3, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 0, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 3, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 0, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 2, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 1, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 3, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 0, 3].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 3, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 0, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 1, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 1, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 2, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 0, 2].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 2, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 0, 1].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 1, 0].stable_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn fast_sort_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil            .fast_sort(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .fast_sort(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .fast_sort(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .fast_sort(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].fast_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].fast_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].fast_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].fast_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].fast_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].fast_sort(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![0i, 1, 2, 3, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 2, 4, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 2, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 4, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 2, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 3, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 3, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 4, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 1, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 4, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 1, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 3, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 2, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 4, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 1, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 4, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 1, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 2, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 2, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 3, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 1, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 3, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 1, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 2, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 3, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 4, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 2, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 4, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 2, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 3, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 3, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 4, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 0, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 0, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 3, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 2, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 4, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 0, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 4, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 0, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 2, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 2, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 3, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 0, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 3, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 0, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 2, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 3, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 4, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 1, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 4, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 1, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 3, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 3, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 4, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 0, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 4, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 0, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 3, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 1, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 4, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 0, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 4, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 0, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 1, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 1, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 3, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 0, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 3, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 0, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 1, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 2, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 4, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 1, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 4, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 1, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 2, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 2, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 4, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 0, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 4, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 0, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 2, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 1, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 4, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 0, 4].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 4, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 0, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 1, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 1, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 2, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 0, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 2, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 0, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 1, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 2, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 3, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 1, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 3, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 1, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 2, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 2, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 3, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 0, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 3, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 0, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 2, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 1, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 3, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 0, 3].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 3, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 0, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 1, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 1, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 2, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 0, 2].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 2, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 0, 1].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 1, 0].fast_sort(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn fast_sorted_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil            .fast_sorted(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .fast_sorted(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .fast_sorted(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .fast_sorted(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].fast_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].fast_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].fast_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].fast_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].fast_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].fast_sorted(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![0i, 1, 2, 3, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 2, 4, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 2, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 3, 4, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 2, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 1, 4, 3, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 3, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 1, 4, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 1, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 3, 4, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 1, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 2, 4, 3, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 2, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 1, 4, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 1, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 2, 4, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 1, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 3, 4, 2, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 2, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 1, 3, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 1, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 2, 3, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 1, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![0i, 4, 3, 2, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 3, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 2, 4, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 2, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 3, 4, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 2, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 0, 4, 3, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 3, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 0, 4, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 0, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 0, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 2, 4, 3, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 2, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 0, 4, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 0, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 2, 4, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 0, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 3, 4, 2, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 2, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 0, 3, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 0, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 2, 3, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 0, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![1i, 4, 3, 2, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 3, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 1, 4, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 1, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 3, 4, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 1, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 0, 4, 3, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 3, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 0, 4, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 0, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 3, 4, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 0, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 1, 4, 3, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 1, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 0, 4, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 0, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 1, 4, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 0, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 3, 4, 1, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 1, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 0, 3, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 0, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 1, 3, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 0, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![2i, 4, 3, 1, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 2, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 1, 4, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 1, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 2, 4, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 1, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 0, 4, 2, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 2, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 0, 4, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 0, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 2, 4, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 0, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 1, 4, 2, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 1, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 0, 4, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 0, 4].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 1, 4, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 0, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 2, 4, 1, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 1, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 0, 2, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 0, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 1, 2, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 0, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![3i, 4, 2, 1, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 2, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 1, 3, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 1, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 2, 3, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 1, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 0, 3, 2, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 2, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 0, 3, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 0, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 2, 3, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 0, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 1, 3, 2, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 1, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 0, 3, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 0, 3].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 1, 3, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 0, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 2, 3, 1, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 1, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 0, 2, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 0, 2].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 1, 2, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 0, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+        assert_eq!(list![4i, 3, 2, 1, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
     }
 
     #[test]
