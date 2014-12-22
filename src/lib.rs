@@ -240,6 +240,32 @@ impl<A: Clone> List<A> {
     }
 }
 
+impl<A: Eq, B: Clone> List<(A, B)>{
+    /// `l.assoc(a)` returns the value associated with key `x` in the list of
+    /// pairs `l`. That is, `list![..., (x, y), ...].assoc(x) == y` if `(x, y)`
+    /// is the leftmost binding of `a` in list `l`. Return `None` if there is no
+    /// value associated with `x` in the list `l`.
+    pub fn assoc(&self, x: A) -> Option<B> {
+        self.fold_left(|a, &(ref k, ref v)| if *k == x && a.is_none() {Some(v.clone())} else {a}, None)
+    }
+}
+
+impl<A: Eq, B> List<(A, B)> {
+    /// Same as `assoc`, but simple return true if a binding exists, and false
+    /// if no bindings exist for the given key.
+    pub fn mem_assoc(&self, x: A) -> bool {
+        self.exists(|&(ref k, _)| *k == x)
+    }
+}
+
+impl<A: Eq + Clone, B: Clone> List<(A, B)> {
+    /// `l.remove_assoc(x)` returns the list of pairs `l` without the first pair
+    /// with key `x`, if any.
+    pub fn remove_assoc(&self, x: A) -> List<(A, B)> {
+        self.clone().remove_assoced(x)
+    }
+}
+
 impl<A: Clone, B: Clone> List<(A, B)> {
     /// Transform a list of pairs into a pair of lists: `list![(a1, b1), ...,
     /// (an, bn)].split()` is `(list![a1, ..., an], list![b1, ..., bn])`.
@@ -451,6 +477,30 @@ impl<A> List<A> {
         };
         let (l1, l2) = self.folded_left(f, (list![], list![]));
         (l1.reved(), l2.reved())
+    }
+}
+
+impl<A: Eq, B> List<(A, B)> {
+    /// Non-borrowing implementation of `assoc`.
+    pub fn assoced(self, x: A) -> Option<B> {
+        self.folded_left(|a, (k, v)| if k == x && a.is_none() {Some(v)} else {a}, None)
+    }
+
+    /// Non-borrowing implementation of `mem_assoc`.
+    pub fn mem_assoced(self, x: A) -> bool {
+        self.into_exists(|(k, _)| k == x)
+    }
+
+    /// Non-borrowing implementation of `remove_assoc`.
+    pub fn remove_assoced(self, x: A) -> List<(A, B)> {
+        let f = |(found, l): (bool, List<(A, B)>), (k, v): (A, B)| {
+            if !found && k == x {
+                (true, l)
+            } else {
+                (found, Cons((k, v), box l))
+            }
+        };
+        self.folded_left(f, (false, list![])).1.reved()
     }
 }
 
@@ -1617,6 +1667,102 @@ mod tests {
         assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|x| *x % 2 == 0),        (list![2, 4], list![1, 3, 5]));
         assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|x| *x % 2 == 1),        (list![1, 3, 5], list![2, 4]));
         assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|x| *x * *x > 10),       (list![4, 5], list![1, 2, 3]));
+    }
+
+    #[test]
+    fn assoc_test() {
+        let nil: List<(int, &str)> = list![];
+        assert_eq!(nil.assoc(1), None);
+        assert_eq!(nil.assoc(2), None);
+        assert_eq!(nil.assoc(3), None);
+
+        assert_eq!(list![(1i, "one")].assoc(1), Some("one"));
+        assert_eq!(list![(1i, "one")].assoc(2), None);
+        assert_eq!(list![(1i, "one")].assoc(3), None);
+
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].assoc(1), Some("one"));
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].assoc(2), Some("two"));
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].assoc(3), Some("three"));
+    }
+
+    #[test]
+    fn assoced_test() {
+        let nil: List<(int, &str)> = list![];
+        assert_eq!(nil.clone().assoced(1), None);
+        assert_eq!(nil.clone().assoced(2), None);
+        assert_eq!(nil.clone().assoced(3), None);
+
+        assert_eq!(list![(1i, "one")].assoced(1), Some("one"));
+        assert_eq!(list![(1i, "one")].assoced(2), None);
+        assert_eq!(list![(1i, "one")].assoced(3), None);
+
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].assoced(1), Some("one"));
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].assoced(2), Some("two"));
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].assoced(3), Some("three"));
+    }
+
+    #[test]
+    fn mem_assoc_test() {
+        let nil: List<(int, &str)> = list![];
+        assert_eq!(nil.mem_assoc(1), false);
+        assert_eq!(nil.mem_assoc(2), false);
+        assert_eq!(nil.mem_assoc(3), false);
+
+        assert_eq!(list![(1i, "one")].mem_assoc(1), true);
+        assert_eq!(list![(1i, "one")].mem_assoc(2), false);
+        assert_eq!(list![(1i, "one")].mem_assoc(3), false);
+
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].mem_assoc(1), true);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].mem_assoc(2), true);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].mem_assoc(3), true);
+    }
+
+    #[test]
+    fn mem_assoced_test() {
+        let nil: List<(int, &str)> = list![];
+        assert_eq!(nil.clone().mem_assoced(1), false);
+        assert_eq!(nil.clone().mem_assoced(2), false);
+        assert_eq!(nil.clone().mem_assoced(3), false);
+
+        assert_eq!(list![(1i, "one")].mem_assoced(1), true);
+        assert_eq!(list![(1i, "one")].mem_assoced(2), false);
+        assert_eq!(list![(1i, "one")].mem_assoced(3), false);
+
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].mem_assoced(1), true);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].mem_assoced(2), true);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].mem_assoced(3), true);
+    }
+
+    #[test]
+    fn remove_assoc_test() {
+        let nil: List<(int, &str)> = list![];
+        assert_eq!(nil.remove_assoc(1), list![]);
+        assert_eq!(nil.remove_assoc(2), list![]);
+        assert_eq!(nil.remove_assoc(3), list![]);
+
+        assert_eq!(list![(1i, "one")].remove_assoc(1), list![]);
+        assert_eq!(list![(1i, "one")].remove_assoc(2), list![(1i, "one")]);
+        assert_eq!(list![(1i, "one")].remove_assoc(3), list![(1i, "one")]);
+
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].remove_assoc(1), list![(2, "two"), (3, "three"), (4, "four")]);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].remove_assoc(2), list![(1, "one"), (3, "three"), (4, "four")]);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].remove_assoc(3), list![(1, "one"), (2, "two"), (4, "four")]);
+    }
+
+    #[test]
+    fn remove_assoced_test() {
+        let nil: List<(int, &str)> = list![];
+        assert_eq!(nil.clone().remove_assoced(1), list![]);
+        assert_eq!(nil.clone().remove_assoced(2), list![]);
+        assert_eq!(nil.clone().remove_assoced(3), list![]);
+
+        assert_eq!(list![(1i, "one")].remove_assoced(1), list![]);
+        assert_eq!(list![(1i, "one")].remove_assoced(2), list![(1i, "one")]);
+        assert_eq!(list![(1i, "one")].remove_assoced(3), list![(1i, "one")]);
+
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].remove_assoced(1), list![(2, "two"), (3, "three"), (4, "four")]);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].remove_assoced(2), list![(1, "one"), (3, "three"), (4, "four")]);
+        assert_eq!(list![(1i, "one"), (2, "two"), (3, "three"), (4, "four")].remove_assoced(3), list![(1, "one"), (2, "two"), (4, "four")]);
     }
 
     #[test]
