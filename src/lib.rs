@@ -212,6 +212,34 @@ impl<'a, A: Eq> List<A> {
     }
 }
 
+impl<A: Clone> List<A> {
+    /// `l.find(p)` returns the first element of the list `l` that satisfies the
+    /// predicate `p`.  Return `None` if there is no value that satisfies `p` in
+    /// the list `l`.
+    pub fn find(&self, p: |&A| -> bool) -> Option<A> {
+        self.clone().found(p)
+    }
+
+    /// `l.filter(p)` returns all the elements of the list `l` that satisfy the
+    /// predicate `p`. The order of the elements in the input list is preserved.
+    pub fn filter(&self, p: |&A| -> bool) -> List<A> {
+        self.clone().filtered(p)
+    }
+
+    /// `find_all` is another name for `filter`.
+    pub fn find_all(&self, p: |&A| -> bool) -> List<A> {
+        self.clone().found_all(p)
+    }
+
+    /// `l.partition(p)` returns a pair of lists `(l1, l2)` where `l1` is the
+    /// list of all the elements of `l` that satisfy the predicate `p`, and `l2`
+    /// is the list of all elements of `l` that do not satisfy `p`. The order of
+    /// the elements in the input list is preserved.
+    pub fn partition(&self, p: |&A| -> bool) -> (List<A>, List<A>) {
+        self.clone().partitioned(p)
+    }
+}
+
 impl<A: Clone, B: Clone> List<(A, B)> {
     /// Transform a list of pairs into a pair of lists: `list![(a1, b1), ...,
     /// (an, bn)].split()` is `(list![a1, ..., an], list![b1, ..., bn])`.
@@ -392,6 +420,36 @@ impl<A> List<A> {
 impl<A: Eq> List<A> {
     pub fn memed(self, y: A) -> bool {
         self.into_exists(|x| x == y)
+    }
+}
+
+impl<A> List<A> {
+    /// Non-borrowing implementation of `find`.
+    pub fn found(self, p: |&A| -> bool) -> Option<A> {
+        self.folded_left(|a, x| if p(&x) && a.is_none() {Some(x)} else {a}, None)
+    }
+
+    /// Non-borrowing implementation of `filter`.
+    pub fn filtered(self, p: |&A| -> bool) -> List<A> {
+        self.folded_left(|l, x| if p(&x) {Cons(x, box l)} else {l}, list![]).reved()
+    }
+
+    /// Non-borrowing implementation of `find_all`.
+    pub fn found_all(self, p: |&A| -> bool) -> List<A> {
+        self.filtered(p)
+    }
+
+    /// Non-borrowing implementation of `partition`.
+    pub fn partitioned(self, p: |&A| -> bool) -> (List<A>, List<A>) {
+        let f = |(l1, l2), x| {
+            if p(&x) {
+                (Cons(x, box l1), l2)
+            } else {
+                (l1, Cons(x, box l2))
+            }
+        };
+        let (l1, l2) = self.folded_left(f, (list![], list![]));
+        (l1.reved(), l2.reved())
     }
 }
 
@@ -1358,6 +1416,206 @@ mod tests {
         assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(4i),  true);
         assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(5i),  true);
         assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(6i),  false);
+    }
+
+    #[test]
+    fn find_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.find(|_| true),               None);
+        assert_eq!(nil.find(|_| false),              None);
+        assert_eq!(nil.find(|x| *x >= 0 || *x <= 0), None);
+        assert_eq!(nil.find(|x| *x % 2 == 0),        None);
+        assert_eq!(nil.find(|x| *x % 2 == 1),        None);
+        assert_eq!(nil.find(|x| *x * *x > 10),       None);
+
+        assert_eq!(list![1i].find(|_| true),               Some(1));
+        assert_eq!(list![1i].find(|_| false),              None);
+        assert_eq!(list![1i].find(|x| *x >= 0 || *x <= 0), Some(1));
+        assert_eq!(list![1i].find(|x| *x % 2 == 0),        None);
+        assert_eq!(list![1i].find(|x| *x % 2 == 1),        Some(1));
+        assert_eq!(list![1i].find(|x| *x * *x > 10),       None);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].find(|_| true),               Some(1));
+        assert_eq!(list![1i, 2, 3, 4, 5].find(|_| false),              None);
+        assert_eq!(list![1i, 2, 3, 4, 5].find(|x| *x >= 0 || *x <= 0), Some(1));
+        assert_eq!(list![1i, 2, 3, 4, 5].find(|x| *x % 2 == 0),        Some(2));
+        assert_eq!(list![1i, 2, 3, 4, 5].find(|x| *x % 2 == 1),        Some(1));
+        assert_eq!(list![1i, 2, 3, 4, 5].find(|x| *x * *x > 10),       Some(4));
+    }
+
+    #[test]
+    fn found_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().found(|_| true),               None);
+        assert_eq!(nil.clone().found(|_| false),              None);
+        assert_eq!(nil.clone().found(|x| *x >= 0 || *x <= 0), None);
+        assert_eq!(nil.clone().found(|x| *x % 2 == 0),        None);
+        assert_eq!(nil.clone().found(|x| *x % 2 == 1),        None);
+        assert_eq!(nil.clone().found(|x| *x * *x > 10),       None);
+
+        assert_eq!(list![1i].found(|_| true),               Some(1));
+        assert_eq!(list![1i].found(|_| false),              None);
+        assert_eq!(list![1i].found(|x| *x >= 0 || *x <= 0), Some(1));
+        assert_eq!(list![1i].found(|x| *x % 2 == 0),        None);
+        assert_eq!(list![1i].found(|x| *x % 2 == 1),        Some(1));
+        assert_eq!(list![1i].found(|x| *x * *x > 10),       None);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].found(|_| true),               Some(1));
+        assert_eq!(list![1i, 2, 3, 4, 5].found(|_| false),              None);
+        assert_eq!(list![1i, 2, 3, 4, 5].found(|x| *x >= 0 || *x <= 0), Some(1));
+        assert_eq!(list![1i, 2, 3, 4, 5].found(|x| *x % 2 == 0),        Some(2));
+        assert_eq!(list![1i, 2, 3, 4, 5].found(|x| *x % 2 == 1),        Some(1));
+        assert_eq!(list![1i, 2, 3, 4, 5].found(|x| *x * *x > 10),       Some(4));
+    }
+
+    #[test]
+    fn filter_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.filter(|_| true),               list![]);
+        assert_eq!(nil.filter(|_| false),              list![]);
+        assert_eq!(nil.filter(|x| *x >= 0 || *x <= 0), list![]);
+        assert_eq!(nil.filter(|x| *x % 2 == 0),        list![]);
+        assert_eq!(nil.filter(|x| *x % 2 == 1),        list![]);
+        assert_eq!(nil.filter(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i].filter(|_| true),               list![1]);
+        assert_eq!(list![1i].filter(|_| false),              list![]);
+        assert_eq!(list![1i].filter(|x| *x >= 0 || *x <= 0), list![1]);
+        assert_eq!(list![1i].filter(|x| *x % 2 == 0),        list![]);
+        assert_eq!(list![1i].filter(|x| *x % 2 == 1),        list![1]);
+        assert_eq!(list![1i].filter(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].filter(|_| true),               list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filter(|_| false),              list![]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filter(|x| *x >= 0 || *x <= 0), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filter(|x| *x % 2 == 0),        list![2, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filter(|x| *x % 2 == 1),        list![1, 3, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filter(|x| *x * *x > 10),       list![4, 5]);
+    }
+
+    #[test]
+    fn filtered_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().filtered(|_| true),               list![]);
+        assert_eq!(nil.clone().filtered(|_| false),              list![]);
+        assert_eq!(nil.clone().filtered(|x| *x >= 0 || *x <= 0), list![]);
+        assert_eq!(nil.clone().filtered(|x| *x % 2 == 0),        list![]);
+        assert_eq!(nil.clone().filtered(|x| *x % 2 == 1),        list![]);
+        assert_eq!(nil.clone().filtered(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i].filtered(|_| true),               list![1]);
+        assert_eq!(list![1i].filtered(|_| false),              list![]);
+        assert_eq!(list![1i].filtered(|x| *x >= 0 || *x <= 0), list![1]);
+        assert_eq!(list![1i].filtered(|x| *x % 2 == 0),        list![]);
+        assert_eq!(list![1i].filtered(|x| *x % 2 == 1),        list![1]);
+        assert_eq!(list![1i].filtered(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].filtered(|_| true),               list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filtered(|_| false),              list![]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filtered(|x| *x >= 0 || *x <= 0), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filtered(|x| *x % 2 == 0),        list![2, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filtered(|x| *x % 2 == 1),        list![1, 3, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].filtered(|x| *x * *x > 10),       list![4, 5]);
+    }
+
+    #[test]
+    fn find_all_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.find_all(|_| true),               list![]);
+        assert_eq!(nil.find_all(|_| false),              list![]);
+        assert_eq!(nil.find_all(|x| *x >= 0 || *x <= 0), list![]);
+        assert_eq!(nil.find_all(|x| *x % 2 == 0),        list![]);
+        assert_eq!(nil.find_all(|x| *x % 2 == 1),        list![]);
+        assert_eq!(nil.find_all(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i].find_all(|_| true),               list![1]);
+        assert_eq!(list![1i].find_all(|_| false),              list![]);
+        assert_eq!(list![1i].find_all(|x| *x >= 0 || *x <= 0), list![1]);
+        assert_eq!(list![1i].find_all(|x| *x % 2 == 0),        list![]);
+        assert_eq!(list![1i].find_all(|x| *x % 2 == 1),        list![1]);
+        assert_eq!(list![1i].find_all(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].find_all(|_| true),               list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].find_all(|_| false),              list![]);
+        assert_eq!(list![1i, 2, 3, 4, 5].find_all(|x| *x >= 0 || *x <= 0), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].find_all(|x| *x % 2 == 0),        list![2, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 5].find_all(|x| *x % 2 == 1),        list![1, 3, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].find_all(|x| *x * *x > 10),       list![4, 5]);
+    }
+
+    #[test]
+    fn found_all_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().found_all(|_| true),               list![]);
+        assert_eq!(nil.clone().found_all(|_| false),              list![]);
+        assert_eq!(nil.clone().found_all(|x| *x >= 0 || *x <= 0), list![]);
+        assert_eq!(nil.clone().found_all(|x| *x % 2 == 0),        list![]);
+        assert_eq!(nil.clone().found_all(|x| *x % 2 == 1),        list![]);
+        assert_eq!(nil.clone().found_all(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i].found_all(|_| true),               list![1]);
+        assert_eq!(list![1i].found_all(|_| false),              list![]);
+        assert_eq!(list![1i].found_all(|x| *x >= 0 || *x <= 0), list![1]);
+        assert_eq!(list![1i].found_all(|x| *x % 2 == 0),        list![]);
+        assert_eq!(list![1i].found_all(|x| *x % 2 == 1),        list![1]);
+        assert_eq!(list![1i].found_all(|x| *x * *x > 10),       list![]);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].found_all(|_| true),               list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].found_all(|_| false),              list![]);
+        assert_eq!(list![1i, 2, 3, 4, 5].found_all(|x| *x >= 0 || *x <= 0), list![1, 2, 3, 4, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].found_all(|x| *x % 2 == 0),        list![2, 4]);
+        assert_eq!(list![1i, 2, 3, 4, 5].found_all(|x| *x % 2 == 1),        list![1, 3, 5]);
+        assert_eq!(list![1i, 2, 3, 4, 5].found_all(|x| *x * *x > 10),       list![4, 5]);
+    }
+
+    #[test]
+    fn partition_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.partition(|_| true),               (list![], list![]));
+        assert_eq!(nil.partition(|_| false),              (list![], list![]));
+        assert_eq!(nil.partition(|x| *x >= 0 || *x <= 0), (list![], list![]));
+        assert_eq!(nil.partition(|x| *x % 2 == 0),        (list![], list![]));
+        assert_eq!(nil.partition(|x| *x % 2 == 1),        (list![], list![]));
+        assert_eq!(nil.partition(|x| *x * *x > 10),       (list![], list![]));
+
+        assert_eq!(list![1i].partition(|_| true),               (list![1], list![]));
+        assert_eq!(list![1i].partition(|_| false),              (list![], list![1]));
+        assert_eq!(list![1i].partition(|x| *x >= 0 || *x <= 0), (list![1], list![]));
+        assert_eq!(list![1i].partition(|x| *x % 2 == 0),        (list![], list![1]));
+        assert_eq!(list![1i].partition(|x| *x % 2 == 1),        (list![1], list![]));
+        assert_eq!(list![1i].partition(|x| *x * *x > 10),       (list![], list![1]));
+
+        assert_eq!(list![1i, 2, 3, 4, 5].partition(|_| true),               (list![1, 2, 3, 4, 5], list![]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partition(|_| false),              (list![], list![1, 2, 3, 4, 5]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partition(|x| *x >= 0 || *x <= 0), (list![1, 2, 3, 4, 5], list![]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partition(|x| *x % 2 == 0),        (list![2, 4], list![1, 3, 5]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partition(|x| *x % 2 == 1),        (list![1, 3, 5], list![2, 4]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partition(|x| *x * *x > 10),       (list![4, 5], list![1, 2, 3]));
+    }
+
+    #[test]
+    fn partitioned_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().partitioned(|_| true),               (list![], list![]));
+        assert_eq!(nil.clone().partitioned(|_| false),              (list![], list![]));
+        assert_eq!(nil.clone().partitioned(|x| *x >= 0 || *x <= 0), (list![], list![]));
+        assert_eq!(nil.clone().partitioned(|x| *x % 2 == 0),        (list![], list![]));
+        assert_eq!(nil.clone().partitioned(|x| *x % 2 == 1),        (list![], list![]));
+        assert_eq!(nil.clone().partitioned(|x| *x * *x > 10),       (list![], list![]));
+
+        assert_eq!(list![1i].partitioned(|_| true),               (list![1], list![]));
+        assert_eq!(list![1i].partitioned(|_| false),              (list![], list![1]));
+        assert_eq!(list![1i].partitioned(|x| *x >= 0 || *x <= 0), (list![1], list![]));
+        assert_eq!(list![1i].partitioned(|x| *x % 2 == 0),        (list![], list![1]));
+        assert_eq!(list![1i].partitioned(|x| *x % 2 == 1),        (list![1], list![]));
+        assert_eq!(list![1i].partitioned(|x| *x * *x > 10),       (list![], list![1]));
+
+        assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|_| true),               (list![1, 2, 3, 4, 5], list![]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|_| false),              (list![], list![1, 2, 3, 4, 5]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|x| *x >= 0 || *x <= 0), (list![1, 2, 3, 4, 5], list![]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|x| *x % 2 == 0),        (list![2, 4], list![1, 3, 5]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|x| *x % 2 == 1),        (list![1, 3, 5], list![2, 4]));
+        assert_eq!(list![1i, 2, 3, 4, 5].partitioned(|x| *x * *x > 10),       (list![4, 5], list![1, 2, 3]));
     }
 
     #[test]
