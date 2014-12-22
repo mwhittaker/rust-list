@@ -301,6 +301,11 @@ impl<A: Clone> List<A> {
         self.clone().fast_sorted(cmp)
     }
 
+    /// Same as `sort`, but also remove duplicates.
+    pub fn sort_uniq(&self, cmp: |&A, &A| -> int) -> List<A> {
+        self.clone().sorted_uniq(cmp)
+    }
+
     /// Merge two lists: Assuming that `l1` and `l2` are sorted according to the
     /// comparison function `cmp`, `l1.merge(cmp, l2)` will return a sorted list
     /// containing all the elemnts of `l1` and `l2`. If several elements compare
@@ -593,6 +598,24 @@ impl<A> List<A> {
     /// Non-borrowing implementation of `fast_sort`.
     pub fn fast_sorted(self, cmp: |&A, &A| -> int) -> List<A> {
         self.sorted(cmp)
+    }
+
+    /// Non-borrowing implementation of `sort_uniq`.
+    pub fn sorted_uniq(self, cmp: |&A, &A| -> int) -> List<A> {
+        let xs = self.sorted(|x, y| cmp(x, y));
+        let f = |ys: List<A>, x: A| {
+            match ys {
+                Nil => Cons(x, box Nil),
+                Cons(y, box ys) => {
+                    if cmp(&y, &x) == 0 {
+                        Cons(y, box ys)
+                    } else {
+                        Cons(x, box Cons(y, box ys))
+                    }
+                }
+            }
+        };
+        xs.folded_left(f, list![]).reved()
     }
 
     /// Non-borrowing implementation of `merge`.
@@ -2781,6 +2804,82 @@ mod tests {
         assert_eq!(list![4i, 3, 1, 2, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
         assert_eq!(list![4i, 3, 2, 0, 1].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
         assert_eq!(list![4i, 3, 2, 1, 0].fast_sorted(|x, y| cmp(x, y)), list![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn sort_uniq_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil            .sort_uniq(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .sort_uniq(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .sort_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .sort_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(nil                     .sort_uniq(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i, 1]            .sort_uniq(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 1, 2, 2]      .sort_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 2, 1, 1]      .sort_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 1, 3, 3, 2, 2].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 2, 1, 1, 3, 3].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 2, 3, 3, 1, 1].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 3, 1, 1, 2, 2].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 3, 2, 2, 1, 1].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![3i, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 1].sort_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+    }
+
+    #[test]
+    fn sorted_uniq_test() {
+        let cmp = |x: &int, y: &int| {
+            if *x < *y {
+                -1
+            } else if *x == *y {
+                0
+            } else {
+                1
+            }
+        };
+
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone()    .sorted_uniq(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i]      .sorted_uniq(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 2]   .sorted_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 1]   .sorted_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 2, 3].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 3, 2].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 1, 3].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 3, 1].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 1, 2].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 2, 1].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(nil.clone()             .sorted_uniq(|x, y| cmp(x, y)), list![]);
+        assert_eq!(list![1i, 1]            .sorted_uniq(|x, y| cmp(x, y)), list![1]);
+        assert_eq!(list![1i, 1, 2, 2]      .sorted_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![2i, 2, 1, 1]      .sorted_uniq(|x, y| cmp(x, y)), list![1, 2]);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![1i, 1, 3, 3, 2, 2].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 2, 1, 1, 3, 3].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![2i, 2, 3, 3, 1, 1].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 3, 1, 1, 2, 2].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+        assert_eq!(list![3i, 3, 2, 2, 1, 1].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
+
+        assert_eq!(list![3i, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 1].sorted_uniq(|x, y| cmp(x, y)), list![1, 2, 3]);
     }
 
     #[test]
