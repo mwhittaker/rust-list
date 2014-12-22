@@ -418,6 +418,7 @@ impl<A> List<A> {
 }
 
 impl<A: Eq> List<A> {
+    /// Non-borrowing implementation of `mem`.
     pub fn memed(self, y: A) -> bool {
         self.into_exists(|x| x == y)
     }
