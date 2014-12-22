@@ -205,6 +205,13 @@ impl<'a, A> List<A> {
     }
 }
 
+impl<'a, A: Eq> List<A> {
+    /// `l.mem(a)` is true if and only if `a` is equal to an element of `l`.
+    pub fn mem(&'a self, y: &A) -> bool {
+        self.exists(|x| *x == *y)
+    }
+}
+
 impl<A: Clone, B: Clone> List<(A, B)> {
     /// Transform a list of pairs into a pair of lists: `list![(a1, b1), ...,
     /// (an, bn)].split()` is `(list![a1, ..., an], list![b1, ..., bn])`.
@@ -379,6 +386,12 @@ impl<A> List<A> {
     /// Non-borrowing implementation of `exists2`.
     pub fn into_exists2<B>(self, p: |A, B| -> bool, ys: List<B>) -> Option<bool> {
         self.folded_left2(|a, x, y| p(x, y) || a, false, ys)
+    }
+}
+
+impl<A: Eq> List<A> {
+    pub fn memed(self, y: A) -> bool {
+        self.into_exists(|x| x == y)
     }
 }
 
@@ -1285,6 +1298,66 @@ mod tests {
         assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, y| x < 10 && y < 10,         list![6i, 7, 8, 9, 10]), Some(true));
         assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, y| x % 2 == 1 || y % 2 == 0, list![6i, 7, 8, 9, 10]), Some(true));
         assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, y| x % 2 == 0 && y % 2 == 0, list![6i, 7, 8, 9, 10]), Some(false));
+    }
+
+    #[test]
+    fn mem_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.mem(&0i), false);
+        assert_eq!(nil.mem(&1i), false);
+        assert_eq!(nil.mem(&2i), false);
+
+        assert_eq!(list![1i].mem(&0i), false);
+        assert_eq!(list![1i].mem(&1i), true);
+        assert_eq!(list![1i].mem(&2i), false);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&-1i), false);
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&0i),  false);
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&1i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&2i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&3i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&4i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&5i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].mem(&6i),  false);
+
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&-1i), false);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&0i),  false);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&1i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&2i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&3i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&4i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&5i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].mem(&6i),  false);
+    }
+
+    #[test]
+    fn memed_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().memed(0i), false);
+        assert_eq!(nil.clone().memed(1i), false);
+        assert_eq!(nil.clone().memed(2i), false);
+
+        assert_eq!(list![1i].memed(0i), false);
+        assert_eq!(list![1i].memed(1i), true);
+        assert_eq!(list![1i].memed(2i), false);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(-1i), false);
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(0i),  false);
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(1i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(2i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(3i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(4i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(5i),  true);
+        assert_eq!(list![1i, 2, 3, 4, 5].memed(6i),  false);
+
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(-1i), false);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(0i),  false);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(1i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(2i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(3i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(4i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(5i),  true);
+        assert_eq!(list![1i, 1, 2, 2, 3, 3, 4, 4, 5, 5].memed(6i),  false);
     }
 
     #[test]
