@@ -286,18 +286,18 @@ impl<A: Clone> List<A> {
     /// comparison function must return 0 if the arguments compare as equal, a
     /// positive integer if the first is greater, and a negative integer if the
     /// first is smaller. The resulting list is sorted in increasing order.
-    pub fn sort(self, cmp: |&A, &A| -> int) -> List<A> {
+    pub fn sort(&self, cmp: |&A, &A| -> int) -> List<A> {
         self.clone().sorted(cmp)
     }
 
     /// Same as `sort` but the sorting algorithm is guaranteed to be stable
     /// (i.e. elements that compare equal are kept in their original order).
-    pub fn stable_sort(self, cmp: |&A, &A| -> int) -> List<A> {
+    pub fn stable_sort(&self, cmp: |&A, &A| -> int) -> List<A> {
         self.clone().stable_sorted(cmp)
     }
 
     /// Same as `sort` or `stable_sort`, whichever is faster on typical input.
-    pub fn fast_sort(self, cmp: |&A, &A| -> int) -> List<A> {
+    pub fn fast_sort(&self, cmp: |&A, &A| -> int) -> List<A> {
         self.clone().fast_sorted(cmp)
     }
 
