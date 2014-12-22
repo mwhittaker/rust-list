@@ -177,6 +177,32 @@ impl<'a, A> List<A> {
     pub fn fold_right2<'b, B, C>(&'a self, f: |&'a A, &'b B, C| -> C, ys: &'b List<B>, a: C) -> Option<C> {
         self.map(|x| x).folded_right2(f, ys.map(|y| y), a)
     }
+
+    /// `list![a1, ..., an].for_all(p)` checks if all elements of the list
+    /// satisfy the predicate `p`. That is, it returns
+    /// `(p(a1)) && (p(a2)) && ... && (p(an))`
+    pub fn for_all(&'a self, p: |&'a A| -> bool) -> bool {
+        self.map(|x| x).for_alled(p)
+    }
+
+    /// `list![a1, ..., an].for_all(p)` checks if at least one element of the
+    /// list satisfies the predicate `p`. That is, it returns
+    /// `(p(a1)) || (p(a2)) || ... || (p(an))`
+    pub fn exists(&'a self, p: |&'a A| -> bool) -> bool {
+        self.map(|x| x).into_exists(p)
+    }
+
+    /// Same as `List::for_all`, but for a two-argument predicate. Return `None`
+    /// if the two lists have different lengths.
+    pub fn for_all2<'b, B>(&'a self, p: |&'a A, &'b B| -> bool, ys: &'b List<B>) -> Option<bool> {
+        self.map(|x| x).for_alled2(p, ys.map(|y| y))
+    }
+
+    /// Same as `List::exists`, but for a two-argument predicate. Return `None`
+    /// if the two lists have different lengths.
+    pub fn exists2<'b, B>(&'a self, p: |&'a A, &'b B| -> bool, ys: &'b List<B>) -> Option<bool> {
+        self.map(|x| x).into_exists2(p, ys.map(|y| y))
+    }
 }
 
 impl<A: Clone, B: Clone> List<(A, B)> {
@@ -333,6 +359,26 @@ impl<A> List<A> {
             return None;
         }
         Some(self.combined(ys).expect("impossible").folded_right(|(x, y), a| f(x, y, a), a))
+    }
+
+    /// Non-borrowing implementation of `for_all`.
+    pub fn for_alled(self, p: |A| -> bool) -> bool {
+        self.folded_left(|a, x| p(x) && a, true)
+    }
+
+    /// Non-borrowing implementation of `exists`.
+    pub fn into_exists(self, p: |A| -> bool) -> bool {
+        self.folded_left(|a, x| p(x) || a, false)
+    }
+
+    /// Non-borrowing implementation of `for_all2`.
+    pub fn for_alled2<B>(self, p: |A, B| -> bool, ys: List<B>) -> Option<bool> {
+        self.folded_left2(|a, x, y| p(x, y) && a, true, ys)
+    }
+
+    /// Non-borrowing implementation of `exists2`.
+    pub fn into_exists2<B>(self, p: |A, B| -> bool, ys: List<B>) -> Option<bool> {
+        self.folded_left2(|a, x, y| p(x, y) || a, false, ys)
     }
 }
 
@@ -983,6 +1029,262 @@ mod tests {
         assert_eq!(list![1i, 2, 3].folded_right2(|x, y, a| a + x + y, list![-1i, -2, -3], 0i), Some(0));
         assert_eq!(list![1i, 2, 3].folded_right2(|x, y, a| a + x + y, list![1i, 2, 3], 0i),    Some(12));
         assert_eq!(list!["a", "b", "c"].folded_right2(|x, y, a| a + x + y, list!["d", "e", "f"], String::from_str("")), Some(String::from_str("cfbead")));
+    }
+
+    #[test]
+    fn for_all_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.for_all(|_| true),        true);
+        assert_eq!(nil.for_all(|_| false),       true);
+        assert_eq!(nil.for_all(|x| *x == 1),     true);
+        assert_eq!(nil.for_all(|x| *x < 10),     true);
+        assert_eq!(nil.for_all(|x| *x % 2 == 1), true);
+        assert_eq!(nil.for_all(|x| *x % 2 == 0), true);
+
+        assert_eq!(list![1i].for_all(|_| true),        true);
+        assert_eq!(list![1i].for_all(|_| false),       false);
+        assert_eq!(list![1i].for_all(|x| *x == 1),     true);
+        assert_eq!(list![1i].for_all(|x| *x < 10),     true);
+        assert_eq!(list![1i].for_all(|x| *x % 2 == 1), true);
+        assert_eq!(list![1i].for_all(|x| *x % 2 == 0), false);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all(|_| true),        true);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all(|_| false),       false);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all(|x| *x == 1),     false);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all(|x| *x < 10),     true);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all(|x| *x % 2 == 1), false);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all(|x| *x % 2 == 0), false);
+    }
+
+    #[test]
+    fn for_alled_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().for_alled(|_| true),       true);
+        assert_eq!(nil.clone().for_alled(|_| false),      true);
+        assert_eq!(nil.clone().for_alled(|x| x == 1),     true);
+        assert_eq!(nil.clone().for_alled(|x| x < 10),     true);
+        assert_eq!(nil.clone().for_alled(|x| x % 2 == 1), true);
+        assert_eq!(nil.clone().for_alled(|x| x % 2 == 0), true);
+
+        assert_eq!(list![1i].for_alled(|_| true),       true);
+        assert_eq!(list![1i].for_alled(|_| false),      false);
+        assert_eq!(list![1i].for_alled(|x| x == 1),     true);
+        assert_eq!(list![1i].for_alled(|x| x < 10),     true);
+        assert_eq!(list![1i].for_alled(|x| x % 2 == 1), true);
+        assert_eq!(list![1i].for_alled(|x| x % 2 == 0), false);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled(|_| true),       true);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled(|_| false),      false);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled(|x| x == 1),     false);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled(|x| x < 10),     true);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled(|x| x % 2 == 1), false);
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled(|x| x % 2 == 0), false);
+    }
+
+    #[test]
+    fn exists_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.exists(|_| true),        false);
+        assert_eq!(nil.exists(|_| false),       false);
+        assert_eq!(nil.exists(|x| *x == 1),     false);
+        assert_eq!(nil.exists(|x| *x < 10),     false);
+        assert_eq!(nil.exists(|x| *x % 2 == 1), false);
+        assert_eq!(nil.exists(|x| *x % 2 == 0), false);
+
+        assert_eq!(list![1i].exists(|_| true),        true);
+        assert_eq!(list![1i].exists(|_| false),       false);
+        assert_eq!(list![1i].exists(|x| *x == 1),     true);
+        assert_eq!(list![1i].exists(|x| *x < 10),     true);
+        assert_eq!(list![1i].exists(|x| *x % 2 == 1), true);
+        assert_eq!(list![1i].exists(|x| *x % 2 == 0), false);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].exists(|_| true),        true);
+        assert_eq!(list![1i, 2, 3, 4, 5].exists(|_| false),       false);
+        assert_eq!(list![1i, 2, 3, 4, 5].exists(|x| *x == 1),     true);
+        assert_eq!(list![1i, 2, 3, 4, 5].exists(|x| *x < 10),     true);
+        assert_eq!(list![1i, 2, 3, 4, 5].exists(|x| *x % 2 == 1), true);
+        assert_eq!(list![1i, 2, 3, 4, 5].exists(|x| *x % 2 == 0), true);
+    }
+
+    #[test]
+    fn into_exists_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().into_exists(|_| true),       false);
+        assert_eq!(nil.clone().into_exists(|_| false),      false);
+        assert_eq!(nil.clone().into_exists(|x| x == 1),     false);
+        assert_eq!(nil.clone().into_exists(|x| x < 10),     false);
+        assert_eq!(nil.clone().into_exists(|x| x % 2 == 1), false);
+        assert_eq!(nil.clone().into_exists(|x| x % 2 == 0), false);
+
+        assert_eq!(list![1i].into_exists(|_| true),       true);
+        assert_eq!(list![1i].into_exists(|_| false),      false);
+        assert_eq!(list![1i].into_exists(|x| x == 1),     true);
+        assert_eq!(list![1i].into_exists(|x| x < 10),     true);
+        assert_eq!(list![1i].into_exists(|x| x % 2 == 1), true);
+        assert_eq!(list![1i].into_exists(|x| x % 2 == 0), false);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists(|_| true),       true);
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists(|_| false),      false);
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists(|x| x == 1),     true);
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists(|x| x < 10),     true);
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists(|x| x % 2 == 1), true);
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists(|x| x % 2 == 0), true);
+    }
+
+    #[test]
+    fn for_all2_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.for_all2(|_, _| true,        &nil), Some(true));
+        assert_eq!(nil.for_all2(|_, _| false,       &nil), Some(true));
+        assert_eq!(nil.for_all2(|x, _| *x == 1,     &nil), Some(true));
+        assert_eq!(nil.for_all2(|x, _| *x < 10,     &nil), Some(true));
+        assert_eq!(nil.for_all2(|x, _| *x % 2 == 1, &nil), Some(true));
+        assert_eq!(nil.for_all2(|x, _| *x % 2 == 0, &nil), Some(true));
+
+        assert_eq!(list![1i].for_all2(|_, _| true,        &list![1i]), Some(true));
+        assert_eq!(list![1i].for_all2(|_, _| false,       &list![1i]), Some(false));
+        assert_eq!(list![1i].for_all2(|x, _| *x == 1,     &list![1i]), Some(true));
+        assert_eq!(list![1i].for_all2(|x, _| *x < 10,     &list![1i]), Some(true));
+        assert_eq!(list![1i].for_all2(|x, _| *x % 2 == 1, &list![1i]), Some(true));
+        assert_eq!(list![1i].for_all2(|x, _| *x % 2 == 0, &list![1i]), Some(false));
+
+        assert_eq!(list![1i].for_all2(|_, _| true,        &nil), None);
+        assert_eq!(list![1i].for_all2(|_, _| false,       &nil), None);
+        assert_eq!(list![1i].for_all2(|x, _| *x == 1,     &nil), None);
+        assert_eq!(list![1i].for_all2(|x, _| *x < 10,     &nil), None);
+        assert_eq!(list![1i].for_all2(|x, _| *x % 2 == 1, &nil), None);
+        assert_eq!(list![1i].for_all2(|x, _| *x % 2 == 0, &nil), None);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|_, _| true,        &list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|_, _| false,       &list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, _| *x == 1,     &list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, _| *x < 10,     &list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, _| *x % 2 == 1, &list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, _| *x % 2 == 0, &list![1i, 2, 3, 4, 5]), Some(false));
+
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|_, _| true,                       &list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|_, _| false,                      &list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, _| *x == 1,                    &list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, y| *x < 10 && *y < 10,         &list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, y| *x % 2 == 1 || *y % 2 == 0, &list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_all2(|x, y| *x % 2 == 0 && *y % 2 == 0, &list![6i, 7, 8, 9, 10]), Some(false));
+    }
+
+    #[test]
+    fn for_alled2_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().for_alled2(|_, _| true,       nil.clone()), Some(true));
+        assert_eq!(nil.clone().for_alled2(|_, _| false,      nil.clone()), Some(true));
+        assert_eq!(nil.clone().for_alled2(|x, _| x == 1,     nil.clone()), Some(true));
+        assert_eq!(nil.clone().for_alled2(|x, _| x < 10,     nil.clone()), Some(true));
+        assert_eq!(nil.clone().for_alled2(|x, _| x % 2 == 1, nil.clone()), Some(true));
+        assert_eq!(nil.clone().for_alled2(|x, _| x % 2 == 0, nil.clone()), Some(true));
+
+        assert_eq!(list![1i].for_alled2(|_, _| true,       list![1i]), Some(true));
+        assert_eq!(list![1i].for_alled2(|_, _| false,      list![1i]), Some(false));
+        assert_eq!(list![1i].for_alled2(|x, _| x == 1,     list![1i]), Some(true));
+        assert_eq!(list![1i].for_alled2(|x, _| x < 10,     list![1i]), Some(true));
+        assert_eq!(list![1i].for_alled2(|x, _| x % 2 == 1, list![1i]), Some(true));
+        assert_eq!(list![1i].for_alled2(|x, _| x % 2 == 0, list![1i]), Some(false));
+
+        assert_eq!(list![1i].for_alled2(|_, _| true,       nil.clone()), None);
+        assert_eq!(list![1i].for_alled2(|_, _| false,      nil.clone()), None);
+        assert_eq!(list![1i].for_alled2(|x, _| x == 1,     nil.clone()), None);
+        assert_eq!(list![1i].for_alled2(|x, _| x < 10,     nil.clone()), None);
+        assert_eq!(list![1i].for_alled2(|x, _| x % 2 == 1, nil.clone()), None);
+        assert_eq!(list![1i].for_alled2(|x, _| x % 2 == 0, nil.clone()), None);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|_, _| true,       list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|_, _| false,      list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, _| x == 1,     list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, _| x < 10,     list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, _| x % 2 == 1, list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, _| x % 2 == 0, list![1i, 2, 3, 4, 5]), Some(false));
+
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|_, _| true,                     list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|_, _| false,                    list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, _| x == 1,                   list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, y| x < 10 && y < 10,         list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, y| x % 2 == 1 || y % 2 == 0, list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].for_alled2(|x, y| x % 2 == 0 && y % 2 == 0, list![6i, 7, 8, 9, 10]), Some(false));
+    }
+
+    #[test]
+    fn exists2_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.exists2(|_, _| true,        &nil), Some(false));
+        assert_eq!(nil.exists2(|_, _| false,       &nil), Some(false));
+        assert_eq!(nil.exists2(|x, _| *x == 1,     &nil), Some(false));
+        assert_eq!(nil.exists2(|x, _| *x < 10,     &nil), Some(false));
+        assert_eq!(nil.exists2(|x, _| *x % 2 == 1, &nil), Some(false));
+        assert_eq!(nil.exists2(|x, _| *x % 2 == 0, &nil), Some(false));
+
+        assert_eq!(list![1i].exists2(|_, _| true,        &list![1i]), Some(true));
+        assert_eq!(list![1i].exists2(|_, _| false,       &list![1i]), Some(false));
+        assert_eq!(list![1i].exists2(|x, _| *x == 1,     &list![1i]), Some(true));
+        assert_eq!(list![1i].exists2(|x, _| *x < 10,     &list![1i]), Some(true));
+        assert_eq!(list![1i].exists2(|x, _| *x % 2 == 1, &list![1i]), Some(true));
+        assert_eq!(list![1i].exists2(|x, _| *x % 2 == 0, &list![1i]), Some(false));
+
+        assert_eq!(list![1i].exists2(|_, _| true,        &nil), None);
+        assert_eq!(list![1i].exists2(|_, _| false,       &nil), None);
+        assert_eq!(list![1i].exists2(|x, _| *x == 1,     &nil), None);
+        assert_eq!(list![1i].exists2(|x, _| *x < 10,     &nil), None);
+        assert_eq!(list![1i].exists2(|x, _| *x % 2 == 1, &nil), None);
+        assert_eq!(list![1i].exists2(|x, _| *x % 2 == 0, &nil), None);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|_, _| true,        &list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|_, _| false,       &list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, _| *x == 1,     &list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, _| *x < 10,     &list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, _| *x % 2 == 1, &list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, _| *x % 2 == 0, &list![1i, 2, 3, 4, 5]), Some(true));
+
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|_, _| true,                       &list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|_, _| false,                      &list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, _| *x == 1,                    &list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, y| *x < 10 && *y < 10,         &list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, y| *x % 2 == 1 || *y % 2 == 0, &list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].exists2(|x, y| *x % 2 == 0 && *y % 2 == 0, &list![6i, 7, 8, 9, 10]), Some(false));
+    }
+
+    #[test]
+    fn into_exists2_test() {
+        let nil: List<int> = list![];
+        assert_eq!(nil.clone().into_exists2(|_, _| true,       nil.clone()), Some(false));
+        assert_eq!(nil.clone().into_exists2(|_, _| false,      nil.clone()), Some(false));
+        assert_eq!(nil.clone().into_exists2(|x, _| x == 1,     nil.clone()), Some(false));
+        assert_eq!(nil.clone().into_exists2(|x, _| x < 10,     nil.clone()), Some(false));
+        assert_eq!(nil.clone().into_exists2(|x, _| x % 2 == 1, nil.clone()), Some(false));
+        assert_eq!(nil.clone().into_exists2(|x, _| x % 2 == 0, nil.clone()), Some(false));
+
+        assert_eq!(list![1i].into_exists2(|_, _| true,       list![1i]), Some(true));
+        assert_eq!(list![1i].into_exists2(|_, _| false,      list![1i]), Some(false));
+        assert_eq!(list![1i].into_exists2(|x, _| x == 1,     list![1i]), Some(true));
+        assert_eq!(list![1i].into_exists2(|x, _| x < 10,     list![1i]), Some(true));
+        assert_eq!(list![1i].into_exists2(|x, _| x % 2 == 1, list![1i]), Some(true));
+        assert_eq!(list![1i].into_exists2(|x, _| x % 2 == 0, list![1i]), Some(false));
+
+        assert_eq!(list![1i].into_exists2(|_, _| true,       nil.clone()), None);
+        assert_eq!(list![1i].into_exists2(|_, _| false,      nil.clone()), None);
+        assert_eq!(list![1i].into_exists2(|x, _| x == 1,     nil.clone()), None);
+        assert_eq!(list![1i].into_exists2(|x, _| x < 10,     nil.clone()), None);
+        assert_eq!(list![1i].into_exists2(|x, _| x % 2 == 1, nil.clone()), None);
+        assert_eq!(list![1i].into_exists2(|x, _| x % 2 == 0, nil.clone()), None);
+
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|_, _| true,       list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|_, _| false,      list![1i, 2, 3, 4, 5]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, _| x == 1,     list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, _| x < 10,     list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, _| x % 2 == 1, list![1i, 2, 3, 4, 5]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, _| x % 2 == 0, list![1i, 2, 3, 4, 5]), Some(true));
+
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|_, _| true,                     list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|_, _| false,                    list![6i, 7, 8, 9, 10]), Some(false));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, _| x == 1,                   list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, y| x < 10 && y < 10,         list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, y| x % 2 == 1 || y % 2 == 0, list![6i, 7, 8, 9, 10]), Some(true));
+        assert_eq!(list![1i, 2, 3, 4, 5].into_exists2(|x, y| x % 2 == 0 && y % 2 == 0, list![6i, 7, 8, 9, 10]), Some(false));
     }
 
     #[test]
