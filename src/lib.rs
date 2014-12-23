@@ -683,6 +683,28 @@ impl<A: fmt::Show> fmt::Show for List<A> {
     }
 }
 
+pub struct RefItems<'a, A: 'a> {
+    l: &'a List<A>
+}
+
+impl<'a, A> List<A> {
+    pub fn to_iter(&'a self) -> RefItems<'a, A> {
+        RefItems{l: self}
+    }
+}
+
+impl<'a, A> iter::Iterator<&'a A> for RefItems<'a, A> {
+    fn next(&mut self) -> Option<&'a A> {
+        match *self.l {
+            Nil => None,
+            Cons(ref x, box ref xs) => {
+                self.l = xs;
+                Some(x)
+            }
+        }
+    }
+}
+
 pub struct MoveItems<A> {
     l: List<A>
 }
@@ -3042,6 +3064,16 @@ mod tests {
         assert_eq!(list![1i]      .to_string(), "[1]");
         assert_eq!(list![1i, 2]   .to_string(), "[1, 2]");
         assert_eq!(list![1i, 2, 3].to_string(), "[1, 2, 3]");
+    }
+
+    #[test]
+    fn to_iter_test() {
+        assert_eq!(list![]             .to_iter().map(|x| *x).collect::<Vec<int>>(), vec![]);
+        assert_eq!(list![1]            .to_iter().map(|x| *x).collect::<Vec<int>>(), vec![1]);
+        assert_eq!(list![1, 2]         .to_iter().map(|x| *x).collect::<Vec<int>>(), vec![1, 2]);
+        assert_eq!(list![1, 2, 3]      .to_iter().map(|x| *x).collect::<Vec<int>>(), vec![1, 2, 3]);
+        assert_eq!(list![1, 2, 3, 4]   .to_iter().map(|x| *x).collect::<Vec<int>>(), vec![1, 2, 3, 4]);
+        assert_eq!(list![1, 2, 3, 4, 5].to_iter().map(|x| *x).collect::<Vec<int>>(), vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
