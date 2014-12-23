@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `List` enum in crate `list`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, List">
+
+    <title>list::List - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='index.html'>list</a></p><div class='block struct'><h2>Structs</h2><a class='struct ' href='struct.MoveItems.html'>MoveItems</a><a class='struct ' href='struct.RefItems.html'>RefItems</a></div><div class='block enum'><h2>Enums</h2><a class='enum current' href='enum.List.html'>List</a></div><div class='block macro'><h2>Macros</h2><a class='macro ' href='macro.list!.html'>list!</a></div>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content enum">
+<h1 class='fqn'><span class='in-band'>Enum <a href='index.html'>list</a>::<wbr><a class='enum' href=''>List</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+            <a id="collapse-all" href="#">[-]
+            </a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-9' href='../src/list/lib.rs.html#16-19'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum List&lt;A&gt; {
+    Nil,
+    Cons(A, <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;&gt;),
+}</pre><div class='docblock'><p>Rust implementation of OCaml&#39;s <code>&#39;a list</code>.</p>
+</div><h2 class='variants'>Variants</h2>
+<table><tr><td id='variant.Nil'><a class='stability Unmarked' title='No stability level'></a><code>Nil</code></td><td></td></tr><tr><td id='variant.Cons'><a class='stability Unmarked' title='No stability level'></a><code>Cons</code></td><td></td></tr></table><h2 id='methods'>Methods</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.length' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.length' class='fnname'>length</a>(&amp;self) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a></code></h4>
+<div class='docblock'><p>Return the length (number of elements) of the given list.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.hd' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.hd' class='fnname'>hd</a>(&amp;self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Return the first element of the given list. Return <code>None</code> if the list is
+empty.</p>
+</div><h4 id='method.tl' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.tl' class='fnname'>tl</a>(&amp;self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;&gt;</code></h4>
+<div class='docblock'><p>Return the given list without its first element. Return <code>None</code> if the
+list is empty.</p>
+</div><h4 id='method.nth' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.nth' class='fnname'>nth</a>(&amp;self, i: <a href='http://doc.rust-lang.org/nightly/std/primitive.uint.html'>uint</a>) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Return the <code>n</code>-th element of the given list. The first element (head of
+the list) is at position 0. Return <code>None</code> if the list is too short.</p>
+</div><h4 id='method.rev' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.rev' class='fnname'>rev</a>(&amp;self) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>List reversal.</p>
+</div><h4 id='method.append' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.append' class='fnname'>append</a>(&amp;self, ys: &amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Catenate two lists.</p>
+</div><h4 id='method.rev_append' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.rev_append' class='fnname'>rev_append</a>(&amp;self, ys: &amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p><code>l1.rev_append(l2)</code> reverses <code>l1</code> and concatenates it to <code>l2</code>. This is
+equivalent to <code>l1.rev().append(l2)</code>.</p>
+</div><h4 id='method.concat' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.concat' class='fnname'>concat</a>&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt;(xss: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;&amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Concatenate a list of lists. The elements of the argument are all
+concatenated together (in the same order) to give the result.</p>
+</div><h4 id='method.flatten' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.flatten' class='fnname'>flatten</a>&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt;(xss: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;&amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Same as <code>concat</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;'a, A&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.iter' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.iter' class='fnname'>iter</a>(&amp;'a self, f: |&amp;'a A|)</code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].iter(f)</code> applies <code>f</code> in turn to <code>a1, ..., an</code>. It is
+equivalent to <code>{f(a1); f(a2); ...; f(an);}</code>.</p>
+</div><h4 id='method.iteri' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.iteri' class='fnname'>iteri</a>(&amp;'a self, f: |<a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>, &amp;'a A|)</code></h4>
+<div class='docblock'><p>Same as <code>iter</code>, but the function is applied to the index of the elements
+as first argument (counting from 0), and the element itself as second
+argument.</p>
+</div><h4 id='method.map' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.map' class='fnname'>map</a>&lt;B&gt;(&amp;'a self, f: |&amp;'a A| -&gt; B) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].map(f)</code> applies function <code>f</code> to <code>a1, ..., an</code>, and
+builds the list <code>list![f(a1), ..., f(an)]</code> with the results returned by
+<code>f</code>.</p>
+</div><h4 id='method.mapi' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.mapi' class='fnname'>mapi</a>&lt;B&gt;(&amp;'a self, f: |<a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>, &amp;'a A| -&gt; B) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p>Same as <code>map</code>, but the function is applied to the index of the elements
+as first argument (counting from 0), and the element itself as second
+argument.</p>
+</div><h4 id='method.rev_map' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.rev_map' class='fnname'>rev_map</a>&lt;B&gt;(&amp;'a self, f: |&amp;'a A| -&gt; B) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p><code>l.rev_map(f)</code> gives the same results as <code>l.rev().map(f)</code>.</p>
+</div><h4 id='method.fold_left' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fold_left' class='fnname'>fold_left</a>&lt;B&gt;(&amp;'a self, f: |B, &amp;'a A| -&gt; B, a: B) -&gt; B</code></h4>
+<div class='docblock'><p><code>list![b1, ..., bn].fold_left(f, a)</code> is <code>f (... (f ( f a b1) b2) ... )
+bn</code>.</p>
+</div><h4 id='method.fold_right' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fold_right' class='fnname'>fold_right</a>&lt;B&gt;(&amp;'a self, f: |&amp;'a A, B| -&gt; B, a: B) -&gt; B</code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].fold_right(f, b)</code> is <code>f a1 (f a2 (... (f an b) ...))</code>.</p>
+</div><h4 id='method.iter2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.iter2' class='fnname'>iter2</a>&lt;'b, B&gt;(&amp;'a self, f: |&amp;'a A, &amp;'b B|, ys: &amp;'b <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].iter2(f, list![b1, ..., bn])</code> calls in turn
+<code>f(a1, b1), ..., f(an, bn)</code>. Return <code>None</code> if the two lists have
+different lengths.</p>
+</div><h4 id='method.map2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.map2' class='fnname'>map2</a>&lt;'b, B, C&gt;(&amp;'a self, f: |&amp;'a A, &amp;'b B| -&gt; C, ys: &amp;'b <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;C&gt;&gt;</code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].map2(f, list![b1, ..., bn])</code> is
+<code>list![f(a1, b1), ..., f(an, bn)]</code>. Return <code>None</code> if the two lists have
+different lengths.</p>
+</div><h4 id='method.rev_map2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.rev_map2' class='fnname'>rev_map2</a>&lt;'b, B, C&gt;(&amp;'a self, f: |&amp;'a A, &amp;'b B| -&gt; C, ys: &amp;'b <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;C&gt;&gt;</code></h4>
+<div class='docblock'><p><code>l1.rev_map2(f, l2)</code> gives the same result as <code>l1.map2(f, l2).rev()</code>.</p>
+</div><h4 id='method.fold_left2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fold_left2' class='fnname'>fold_left2</a>&lt;'b, B, C&gt;(&amp;'a self, f: |C, &amp;'a A, &amp;'b B| -&gt; C, a: C, ys: &amp;'b <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;C&gt;</code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].fold_left2(f, a, list![b1, ..., bn])</code> is
+<code>f (... (f (f a a1 b1) a2 b2) ...) an bn</code>. Return <code>None</code> if the two
+lists have different length.</p>
+</div><h4 id='method.fold_right2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fold_right2' class='fnname'>fold_right2</a>&lt;'b, B, C&gt;(&amp;'a self, f: |&amp;'a A, &amp;'b B, C| -&gt; C, ys: &amp;'b <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;, a: C) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;C&gt;</code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].fold_right2(f, a, list![b1, ..., bn])</code> is
+<code>f a1 b1 (f a2 b2 (... (f an bn a) ...))</code>. Return <code>None</code> if the two
+lists have different length.</p>
+</div><h4 id='method.for_all' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.for_all' class='fnname'>for_all</a>(&amp;'a self, p: |&amp;'a A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].for_all(p)</code> checks if all elements of the list
+satisfy the predicate <code>p</code>. That is, it returns
+<code>(p(a1)) &amp;&amp; (p(a2)) &amp;&amp; ... &amp;&amp; (p(an))</code></p>
+</div><h4 id='method.exists' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.exists' class='fnname'>exists</a>(&amp;'a self, p: |&amp;'a A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p><code>list![a1, ..., an].for_all(p)</code> checks if at least one element of the
+list satisfies the predicate <code>p</code>. That is, it returns
+<code>(p(a1)) || (p(a2)) || ... || (p(an))</code></p>
+</div><h4 id='method.for_all2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.for_all2' class='fnname'>for_all2</a>&lt;'b, B&gt;(&amp;'a self, p: |&amp;'a A, &amp;'b B| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>, ys: &amp;'b <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>&gt;</code></h4>
+<div class='docblock'><p>Same as <code>List::for_all</code>, but for a two-argument predicate. Return <code>None</code>
+if the two lists have different lengths.</p>
+</div><h4 id='method.exists2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.exists2' class='fnname'>exists2</a>&lt;'b, B&gt;(&amp;'a self, p: |&amp;'a A, &amp;'b B| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>, ys: &amp;'b <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>&gt;</code></h4>
+<div class='docblock'><p>Same as <code>List::exists</code>, but for a two-argument predicate. Return <code>None</code>
+if the two lists have different lengths.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;'a, A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.mem' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.mem' class='fnname'>mem</a>(&amp;'a self, y: &amp;A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p><code>l.mem(a)</code> is true if and only if <code>a</code> is equal to an element of <code>l</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.find' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.find' class='fnname'>find</a>(&amp;self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p><code>l.find(p)</code> returns the first element of the list <code>l</code> that satisfies the
+predicate <code>p</code>.  Return <code>None</code> if there is no value that satisfies <code>p</code> in
+the list <code>l</code>.</p>
+</div><h4 id='method.filter' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.filter' class='fnname'>filter</a>(&amp;self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p><code>l.filter(p)</code> returns all the elements of the list <code>l</code> that satisfy the
+predicate <code>p</code>. The order of the elements in the input list is preserved.</p>
+</div><h4 id='method.find_all' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.find_all' class='fnname'>find_all</a>(&amp;self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p><code>find_all</code> is another name for <code>filter</code>.</p>
+</div><h4 id='method.partition' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.partition' class='fnname'>partition</a>(&amp;self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;, <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;)</a></code></h4>
+<div class='docblock'><p><code>l.partition(p)</code> returns a pair of lists <code>(l1, l2)</code> where <code>l1</code> is the
+list of all the elements of <code>l</code> that satisfy the predicate <code>p</code>, and <code>l2</code>
+is the list of all elements of <code>l</code> that do not satisfy <code>p</code>. The order of
+the elements in the input list is preserved.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>, B: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h3><div class='impl-items'><h4 id='method.assoc' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.assoc' class='fnname'>assoc</a>(&amp;self, x: A) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p><code>l.assoc(a)</code> returns the value associated with key <code>x</code> in the list of
+pairs <code>l</code>. That is, <code>list![..., (x, y), ...].assoc(x) == y</code> if <code>(x, y)</code>
+is the leftmost binding of <code>a</code> in list <code>l</code>. Return <code>None</code> if there is no
+value associated with <code>x</code> in the list <code>l</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>, B&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h3><div class='impl-items'><h4 id='method.mem_assoc' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.mem_assoc' class='fnname'>mem_assoc</a>(&amp;self, x: A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Same as <code>assoc</code>, but simple return true if a binding exists, and false
+if no bindings exist for the given key.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h3><div class='impl-items'><h4 id='method.remove_assoc' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.remove_assoc' class='fnname'>remove_assoc</a>(&amp;self, x: A) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h4>
+<div class='docblock'><p><code>l.remove_assoc(x)</code> returns the list of pairs <code>l</code> without the first pair
+with key <code>x</code>, if any.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h3><div class='impl-items'><h4 id='method.split' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.split' class='fnname'>split</a>(&amp;self) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;, <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;)</a></code></h4>
+<div class='docblock'><p>Transform a list of pairs into a pair of lists: <code>list![(a1, b1), ...,
+(an, bn)].split()</code> is <code>(list![a1, ..., an], list![b1, ..., bn])</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.combine' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.combine' class='fnname'>combine</a>&lt;B: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt;(&amp;self, ys: &amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;&gt;</code></h4>
+<div class='docblock'><p>Transform a pair of lists into a list of pairs:
+<code>list![a1, ..., an].combine(list![b1, ..., bn])</code> is <code>list![(a1,b2), ...,
+(an,bn)]</code>. Return <code>None</code> if the two lists have different lengths.</p>
+</div><h4 id='method.sort' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.sort' class='fnname'>sort</a>(&amp;self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Sort a list in increasing order according to a comparison function. The
+comparison function must return 0 if the arguments compare as equal, a
+positive integer if the first is greater, and a negative integer if the
+first is smaller. The resulting list is sorted in increasing order.</p>
+</div><h4 id='method.stable_sort' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.stable_sort' class='fnname'>stable_sort</a>(&amp;self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Same as <code>sort</code> but the sorting algorithm is guaranteed to be stable
+(i.e. elements that compare equal are kept in their original order).</p>
+</div><h4 id='method.fast_sort' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fast_sort' class='fnname'>fast_sort</a>(&amp;self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Same as <code>sort</code> or <code>stable_sort</code>, whichever is faster on typical input.</p>
+</div><h4 id='method.sort_uniq' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.sort_uniq' class='fnname'>sort_uniq</a>(&amp;self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Same as <code>sort</code>, but also remove duplicates.</p>
+</div><h4 id='method.merge' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.merge' class='fnname'>merge</a>(&amp;self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>, ys: &amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Merge two lists: Assuming that <code>l1</code> and <code>l2</code> are sorted according to the
+comparison function <code>cmp</code>, <code>l1.merge(cmp, l2)</code> will return a sorted list
+containing all the elemnts of <code>l1</code> and <code>l2</code>. If several elements compare
+equal, the elements of <code>l1</code> will be before the elements of <code>l2</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.into_hd' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.into_hd' class='fnname'>into_hd</a>(self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>hd</code>.</p>
+</div><h4 id='method.into_tl' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.into_tl' class='fnname'>into_tl</a>(self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>tl</code>.</p>
+</div><h4 id='method.into_nth' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.into_nth' class='fnname'>into_nth</a>(self, i: <a href='http://doc.rust-lang.org/nightly/std/primitive.uint.html'>uint</a>) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>nth</code>.</p>
+</div><h4 id='method.appended' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.appended' class='fnname'>appended</a>(self, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>append</code>.</p>
+</div><h4 id='method.rev_appended' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.rev_appended' class='fnname'>rev_appended</a>(self, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>rev_append</code>.</p>
+</div><h4 id='method.concated' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.concated' class='fnname'>concated</a>&lt;A&gt;(xss: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>concat</code>.</p>
+</div><h4 id='method.flattened' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.flattened' class='fnname'>flattened</a>&lt;A&gt;(xss: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>flatten</code>.</p>
+</div><h4 id='method.itered' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.itered' class='fnname'>itered</a>(self, f: |A|)</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>iter</code>.</p>
+</div><h4 id='method.iteried' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.iteried' class='fnname'>iteried</a>(self, f: |<a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>, A|)</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>iteri</code>.</p>
+</div><h4 id='method.mapped' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.mapped' class='fnname'>mapped</a>&lt;B&gt;(self, f: |A| -&gt; B) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>map</code>.</p>
+</div><h4 id='method.mapied' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.mapied' class='fnname'>mapied</a>&lt;B&gt;(self, f: |<a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>, A| -&gt; B) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>mapi</code>.</p>
+</div><h4 id='method.rev_mapped' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.rev_mapped' class='fnname'>rev_mapped</a>&lt;B&gt;(self, f: |A| -&gt; B) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>rev_map</code>.</p>
+</div><h4 id='method.folded_left' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.folded_left' class='fnname'>folded_left</a>&lt;B&gt;(self, f: |B, A| -&gt; B, a: B) -&gt; B</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>fold_left</code>.</p>
+</div><h4 id='method.folded_right' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.folded_right' class='fnname'>folded_right</a>&lt;B&gt;(self, f: |A, B| -&gt; B, a: B) -&gt; B</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>fold_right</code>.</p>
+</div><h4 id='method.itered2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.itered2' class='fnname'>itered2</a>&lt;B&gt;(self, f: |A, B|, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>iter2</code>.</p>
+</div><h4 id='method.mapped2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.mapped2' class='fnname'>mapped2</a>&lt;B, C&gt;(self, f: |A, B| -&gt; C, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;C&gt;&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>map2</code>.</p>
+</div><h4 id='method.rev_mapped2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.rev_mapped2' class='fnname'>rev_mapped2</a>&lt;B, C&gt;(self, f: |A, B| -&gt; C, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;C&gt;&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>rev_map2</code>.</p>
+</div><h4 id='method.folded_left2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.folded_left2' class='fnname'>folded_left2</a>&lt;B, C&gt;(self, f: |C, A, B| -&gt; C, a: C, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;C&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>fold_left2</code>.</p>
+</div><h4 id='method.folded_right2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.folded_right2' class='fnname'>folded_right2</a>&lt;B, C&gt;(self, f: |A, B, C| -&gt; C, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;, a: C) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;C&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>fold_right2</code>.</p>
+</div><h4 id='method.for_alled' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.for_alled' class='fnname'>for_alled</a>(self, p: |A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>for_all</code>.</p>
+</div><h4 id='method.into_exists' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.into_exists' class='fnname'>into_exists</a>(self, p: |A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>exists</code>.</p>
+</div><h4 id='method.for_alled2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.for_alled2' class='fnname'>for_alled2</a>&lt;B&gt;(self, p: |A, B| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>for_all2</code>.</p>
+</div><h4 id='method.into_exists2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.into_exists2' class='fnname'>into_exists2</a>&lt;B&gt;(self, p: |A, B| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>exists2</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.memed' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.memed' class='fnname'>memed</a>(self, y: A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>mem</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.found' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.found' class='fnname'>found</a>(self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>find</code>.</p>
+</div><h4 id='method.filtered' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.filtered' class='fnname'>filtered</a>(self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>filter</code>.</p>
+</div><h4 id='method.found_all' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.found_all' class='fnname'>found_all</a>(self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>find_all</code>.</p>
+</div><h4 id='method.partitioned' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.partitioned' class='fnname'>partitioned</a>(self, p: |&amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;, <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;)</a></code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>partition</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>, B&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h3><div class='impl-items'><h4 id='method.assoced' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.assoced' class='fnname'>assoced</a>(self, x: A) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;B&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>assoc</code>.</p>
+</div><h4 id='method.mem_assoced' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.mem_assoced' class='fnname'>mem_assoced</a>(self, x: A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>mem_assoc</code>.</p>
+</div><h4 id='method.remove_assoced' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.remove_assoced' class='fnname'>remove_assoced</a>(self, x: A) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>remove_assoc</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A, B&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;</code></h3><div class='impl-items'><h4 id='method.splitted' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.splitted' class='fnname'>splitted</a>(self) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;, <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;)</a></code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>split</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.combined' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.combined' class='fnname'>combined</a>&lt;B&gt;(self, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;B&gt;) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(A, B)</a>&gt;&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>combine</code>.</p>
+</div><h4 id='method.sorted' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.sorted' class='fnname'>sorted</a>(self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>sort</code>.</p>
+</div><h4 id='method.stable_sorted' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.stable_sorted' class='fnname'>stable_sorted</a>(self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>stable_sort</code>.</p>
+</div><h4 id='method.fast_sorted' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fast_sorted' class='fnname'>fast_sorted</a>(self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>fast_sort</code>.</p>
+</div><h4 id='method.sorted_uniq' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.sorted_uniq' class='fnname'>sorted_uniq</a>(self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>sort_uniq</code>.</p>
+</div><h4 id='method.merged' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.merged' class='fnname'>merged</a>(self, cmp: |&amp;A, &amp;A| -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.int.html'>int</a>, ys: <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<div class='docblock'><p>Non-borrowing implementation of <code>merge</code>.</p>
+</div></div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;'a, A&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.to_iter' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.to_iter' class='fnname'>to_iter</a>(&amp;'a self) -&gt; <a class='struct' href='../list/struct.RefItems.html' title='list::RefItems'>RefItems</a>&lt;'a, A&gt;</code></h4>
+</div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.into_iter' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.into_iter' class='fnname'>into_iter</a>(self) -&gt; <a class='struct' href='../list/struct.MoveItems.html' title='list::MoveItems'>MoveItems</a>&lt;A&gt;</code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><a class='stability Unstable' title='Unstable: may be replaced by a more general conversion trait'></a><code>impl&lt;A&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.FromIterator.html' title='core::iter::FromIterator'>FromIterator</a>&lt;A&gt; for <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.from_iter' class='method'><a class='stability Unstable' title='Unstable: may be replaced by a more general conversion trait'></a><code>fn <a href='#method.from_iter' class='fnname'>from_iter</a>&lt;T: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;A&gt;&gt;(iterator: T) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+</div><h3 class='impl'><a class='stability Unstable' title='Unstable: I/O and core have yet to be reconciled'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/fmt/trait.Show.html' title='core::fmt::Show'>Show</a>&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/fmt/trait.Show.html' title='core::fmt::Show'>Show</a> for <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.fmt' class='method'><a class='stability Unstable' title='Unstable: I/O and core have yet to be reconciled'></a><code>fn <a href='#method.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class='struct' href='http://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='http://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+<div class='docblock'><pre class='rust '>
+<span class='kw'>let</span> <span class='ident'>nil</span>: <span class='ident'>List</span><span class='op'>&lt;</span><span class='ident'>int</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>Nil</span>;
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>nil</span>),             <span class='string'>&quot;[]&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='macro'>list</span><span class='macro'>!</span>[<span class='number'>1i</span>]),       <span class='string'>&quot;[1]&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='macro'>list</span><span class='macro'>!</span>[<span class='number'>1i</span>, <span class='number'>2</span>]),    <span class='string'>&quot;[1, 2]&quot;</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='macro'>list</span><span class='macro'>!</span>[<span class='number'>1i</span>, <span class='number'>2</span>, <span class='number'>3</span>]), <span class='string'>&quot;[1, 2, 3]&quot;</span>);
+</pre>
+</div></div><h3 id='derived_implementations'>Derived Implementations </h3><h3 class='impl'><a class='stability Unstable' title='Unstable: Definition may change slightly after trait reform'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> for <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.assert_receiver_is_total_eq' class='tymethod'><a class='stability Unstable' title='Unstable: Definition may change slightly after trait reform'></a><code>fn <a href='#tymethod.assert_receiver_is_total_eq' class='fnname'>assert_receiver_is_total_eq</a>(&amp;self)</code></h4>
+</div><h3 class='impl'><a class='stability Unstable' title='Unstable: Definition may change slightly after trait reform'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a>&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.eq' class='method'><a class='stability Unstable' title='Unstable: Definition may change slightly after trait reform'></a><code>fn <a href='#method.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.ne' class='method'><a class='stability Unstable' title='Unstable: Definition may change slightly after trait reform'></a><code>fn <a href='#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+</div><h3 class='impl'><a class='stability Stable' title='Stable'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.clone' class='method'><a class='stability Stable' title='Stable'></a><code>fn <a href='#method.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='enum' href='../list/enum.List.html' title='list::List'>List</a>&lt;A&gt;</code></h4>
+<h4 id='method.clone_from' class='tymethod'><a class='stability Unstable' title='Unstable: this function rarely unused'></a><code>fn <a href='#tymethod.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "list";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>
