@@ -639,15 +639,15 @@ impl<A> List<A> {
     }
 }
 
-// impl<A> iter::FromIterator<A> for List<A> {
-//     fn from_iter<T: Iterator<A>>(mut iterator: T) -> List<A> {
-//         let mut l = list![];
-//         for x in iterator {
-//             l = Cons(x, box l);
-//         }
-//         l.reved()
-//     }
-// }
+impl<A> iter::FromIterator<A> for List<A> {
+    fn from_iter<T: Iterator<A>>(mut iterator: T) -> List<A> {
+        let mut l = list![];
+        for x in iterator {
+            l = Cons(x, box l);
+        }
+        l.reved()
+    }
+}
 
 impl<A: fmt::Show> List<A> {
     fn to_string(&self) -> String {
@@ -3033,29 +3033,29 @@ mod tests {
         assert_eq!(list![2i, 4, 6]      .merged(|_, _| 0, list![1i, 3, 5]),       list![2, 4, 6, 1, 3, 5]);
     }
 
-    // #[test]
-    // fn from_iter_test() {
-    //     assert_eq!(range(0, 0).collect::<List<int>>(), list![]);
-    //     assert_eq!(range(0, 1).collect::<List<int>>(), list![0i]);
-    //     assert_eq!(range(0, 2).collect::<List<int>>(), list![0i, 1]);
-    //     assert_eq!(range(0, 3).collect::<List<int>>(), list![0i, 1, 2]);
-    //     assert_eq!(range(0, 4).collect::<List<int>>(), list![0i, 1, 2, 3]);
-    //     assert_eq!(range(0, 5).collect::<List<int>>(), list![0i, 1, 2, 3, 4]);
+    #[test]
+    fn from_iter_test() {
+        assert_eq!(range(0, 0).collect::<List<int>>(), list![]);
+        assert_eq!(range(0, 1).collect::<List<int>>(), list![0i]);
+        assert_eq!(range(0, 2).collect::<List<int>>(), list![0i, 1]);
+        assert_eq!(range(0, 3).collect::<List<int>>(), list![0i, 1, 2]);
+        assert_eq!(range(0, 4).collect::<List<int>>(), list![0i, 1, 2, 3]);
+        assert_eq!(range(0, 5).collect::<List<int>>(), list![0i, 1, 2, 3, 4]);
 
-    //     assert_eq!(range(0, 0).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![]);
-    //     assert_eq!(range(0, 1).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i]);
-    //     assert_eq!(range(0, 2).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i]);
-    //     assert_eq!(range(0, 3).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i, 2]);
-    //     assert_eq!(range(0, 4).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i, 2]);
-    //     assert_eq!(range(0, 5).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i, 2, 4]);
+        assert_eq!(range(0, 0).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![]);
+        assert_eq!(range(0, 1).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i]);
+        assert_eq!(range(0, 2).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i]);
+        assert_eq!(range(0, 3).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i, 2]);
+        assert_eq!(range(0, 4).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i, 2]);
+        assert_eq!(range(0, 5).filter(|i| *i % 2 == 0).collect::<List<int>>(), list![0i, 2, 4]);
 
-    //     assert_eq!(range(0, 0).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![]);
-    //     assert_eq!(range(0, 1).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i]);
-    //     assert_eq!(range(0, 2).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i]);
-    //     assert_eq!(range(0, 3).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4]);
-    //     assert_eq!(range(0, 4).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4]);
-    //     assert_eq!(range(0, 5).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4, 16]);
-    // }
+        assert_eq!(range(0, 0).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![]);
+        assert_eq!(range(0, 1).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i]);
+        assert_eq!(range(0, 2).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i]);
+        assert_eq!(range(0, 3).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4]);
+        assert_eq!(range(0, 4).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4]);
+        assert_eq!(range(0, 5).filter(|i| *i % 2 == 0).map(|i| i * i).collect::<List<int>>(), list![0i, 4, 16]);
+    }
 
     #[test]
     fn to_string_test() {
