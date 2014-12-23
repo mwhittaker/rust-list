@@ -6,7 +6,8 @@
 //! [OCaml's List module](http://caml.inria.fr/pub/docs/manual-ocaml/libref/List.html) in rust!
 
 use std::fmt;
-// use std::iter;
+use std::iter;
+use std::mem;
 use List::Nil;
 use List::Cons;
 
@@ -679,6 +680,30 @@ impl<A: fmt::Show> fmt::Show for List<A> {
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_string())
+    }
+}
+
+pub struct MoveItems<A> {
+    l: List<A>
+}
+
+impl<A> List<A> {
+    pub fn into_iter(self) -> MoveItems<A> {
+        MoveItems{l: self}
+    }
+}
+
+impl<A> iter::Iterator<A> for MoveItems<A> {
+    fn next(&mut self) -> Option<A> {
+        let l = Nil;
+        let l = mem::replace(&mut self.l, l);
+        match l {
+            Nil => None,
+            Cons(x, box xs) => {
+                self.l = xs;
+                Some(x)
+            }
+        }
     }
 }
 
@@ -3017,5 +3042,15 @@ mod tests {
         assert_eq!(list![1i]      .to_string(), "[1]");
         assert_eq!(list![1i, 2]   .to_string(), "[1, 2]");
         assert_eq!(list![1i, 2, 3].to_string(), "[1, 2, 3]");
+    }
+
+    #[test]
+    fn into_iter_test() {
+        assert_eq!(list![]             .into_iter().map(|x| x).collect::<Vec<int>>(), vec![]);
+        assert_eq!(list![1]            .into_iter().map(|x| x).collect::<Vec<int>>(), vec![1]);
+        assert_eq!(list![1, 2]         .into_iter().map(|x| x).collect::<Vec<int>>(), vec![1, 2]);
+        assert_eq!(list![1, 2, 3]      .into_iter().map(|x| x).collect::<Vec<int>>(), vec![1, 2, 3]);
+        assert_eq!(list![1, 2, 3, 4]   .into_iter().map(|x| x).collect::<Vec<int>>(), vec![1, 2, 3, 4]);
+        assert_eq!(list![1, 2, 3, 4, 5].into_iter().map(|x| x).collect::<Vec<int>>(), vec![1, 2, 3, 4, 5]);
     }
 }
